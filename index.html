@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Tabuada</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Jogo da Tabuada <i class="fas fa-calculator"></i></h1>
+            <button id="showHighScores" class="trophy-btn" title="Ver Melhores Pontuações">
+                <i class="fas fa-trophy"></i>
+            </button>
+        </div>
+
+        <div class="progress-bar">
+            <div class="phase" data-phase="2">
+                <i class="fas fa-calculator"></i>
+                <span>2</span>
+            </div>
+            <div class="phase locked" data-phase="3">
+                <i class="fas fa-lock"></i>
+                <span>3</span>
+            </div>
+            <div class="phase locked" data-phase="4">
+                <i class="fas fa-lock"></i>
+                <span>4</span>
+            </div>
+            <div class="phase locked" data-phase="5">
+                <i class="fas fa-lock"></i>
+                <span>5</span>
+            </div>
+            <div class="phase locked" data-phase="6">
+                <i class="fas fa-lock"></i>
+                <span>6</span>
+            </div>
+            <div class="phase locked" data-phase="7">
+                <i class="fas fa-lock"></i>
+                <span>7</span>
+            </div>
+            <div class="phase locked" data-phase="8">
+                <i class="fas fa-lock"></i>
+                <span>8</span>
+            </div>
+            <div class="phase locked" data-phase="9">
+                <i class="fas fa-lock"></i>
+                <span>9</span>
+            </div>
+        </div>
+        
+        <div id="game">
+            <div class="game-info">
+                <div id="lives">
+                    <span class="lives-label">Vidas:</span>
+                    <span class="hearts-container">
+                        <i class="fas fa-heart"></i>
+                        <i class="fas fa-heart"></i>
+                        <i class="fas fa-heart"></i>
+                        <i class="fas fa-heart"></i>
+                    </span>
+                </div>
+                <div id="score">Pontos: <span id="scoreValue">0</span></div>
+            </div>
+            <div id="timer">30</div>
+            <div id="question"></div>
+            <input type="number" id="answer" placeholder="Digite sua resposta">
+            <button onclick="checkAnswer()">Verificar</button>
+            
+            <div class="history-container">
+                <h3>Últimas tentativas:</h3>
+                <div id="attempts-history" class="attempts-history">
+                    <!-- Os ícones serão inseridos aqui via JavaScript -->
+                </div>
+                <div class="history-legend">
+                    <div class="legend-item">
+                        <i class="fas fa-check-circle correct"></i> Acerto
+                    </div>
+                    <div class="legend-item">
+                        <i class="fas fa-times-circle wrong"></i> Erro
+                    </div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="configBtn" class="action-btn config-btn">
+                    <i class="fas fa-cog"></i> Configurações
+                </button>
+                <button id="restartBtn" class="action-btn restart-btn" title="Reiniciar Jogo">
+                    <i class="fas fa-redo-alt"></i> Reiniciar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Configurações -->
+    <div id="configModal" class="modal">
+        <div class="modal-content">
+            <h2>Configurações <i class="fas fa-cog"></i></h2>
+            <div class="config-option">
+                <label for="difficulty">Dificuldade:</label>
+                <select id="difficulty">
+                    <option value="easy">Fácil (30s)</option>
+                    <option value="medium">Médio (15s)</option>
+                    <option value="hard">Difícil (10s)</option>
+                </select>
+            </div>
+            <div class="config-option">
+                <label for="lives-count">Vidas:</label>
+                <select id="lives-count">
+                    <option value="3">3 Vidas</option>
+                    <option value="4">4 Vidas</option>
+                </select>
+            </div>
+            <button id="saveConfig" class="save-btn">Salvar</button>
+            <button id="resetHighScores" class="reset-btn">
+                <i class="fas fa-trophy"></i> Limpar Ranking
+            </button>
+            <button id="closeModal" class="close-btn">&times;</button>
+        </div>
+    </div>
+
+    <!-- Modal de Próxima Fase -->
+    <div id="nextPhaseModal" class="modal">
+        <div class="modal-content celebration">
+            <h2>Parabéns! <i class="fas fa-star"></i></h2>
+            <p>Você dominou a tabuada do <span id="currentPhase">2</span>!</p>
+            <p>Próxima fase: Tabuada do <span id="nextPhase">3</span></p>
+            <button id="startNextPhase" class="next-phase-btn">
+                Continuar <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Atualizar o modal de Game Over -->
+    <div id="gameOverModal" class="modal">
+        <div class="modal-content">
+            <h2>Fim de Jogo!</h2>
+            <p>Pontuação final: <span id="finalScore">0</span></p>
+            <div class="player-name-input">
+                <label for="playerName">Digite seu nome:</label>
+                <input type="text" id="playerName" maxlength="20" placeholder="Seu nome">
+            </div>
+            <div class="high-scores">
+                <h3>Melhores Pontuações</h3>
+                <div id="highScoresList"></div>
+            </div>
+            <button id="saveScore" class="save-btn">Salvar Pontuação</button>
+            <button id="restartGame" class="action-btn restart-btn">Jogar Novamente</button>
+        </div>
+    </div>
+
+    <!-- Adicionar novo modal de High Scores -->
+    <div id="highScoresModal" class="modal">
+        <div class="modal-content">
+            <h2><i class="fas fa-trophy"></i> Melhores Pontuações</h2>
+            <div class="high-scores">
+                <div id="highScoresListModal"></div>
+            </div>
+            <button id="closeHighScores" class="close-btn">&times;</button>
+        </div>
+    </div>
+
+    <!-- Adicionar modal de pausa -->
+    <div id="pauseModal" class="modal">
+        <div class="modal-content">
+            <h2><i class="fas fa-pause"></i> Jogo Pausado</h2>
+            <button id="resumeGame" class="action-btn">
+                <i class="fas fa-play"></i> Continuar Jogo
+            </button>
+        </div>
+    </div>
+
+    <audio id="correctSound" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
+    <audio id="wrongSound" src="https://assets.mixkit.co/active_storage/sfx/2001/2001-preview.mp3"></audio>
+    <script src="script.js"></script>
+</body>
+</html> 
