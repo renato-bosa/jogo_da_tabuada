@@ -130,11 +130,38 @@ function updateProgressBar() {
     });
 }
 
-// Mostra o modal de próxima fase
+// Adicionar função para ganhar vida
+function gainLife() {
+    if (lives < MAX_LIVES) {
+        lives++;
+        const heartsContainer = document.querySelector('.hearts-container');
+        const newHeart = document.createElement('i');
+        newHeart.className = 'fas fa-heart';
+        newHeart.style.opacity = '0';
+        heartsContainer.appendChild(newHeart);
+        
+        // Animar o aparecimento do novo coração
+        setTimeout(() => {
+            newHeart.style.transition = 'opacity 0.5s, transform 0.5s';
+            newHeart.style.opacity = '1';
+            newHeart.style.transform = 'scale(1.2)';
+            setTimeout(() => {
+                newHeart.style.transform = 'scale(1)';
+            }, 500);
+        }, 100);
+        
+        updateLives();
+    }
+}
+
+// Atualizar a função showNextPhaseModal
 function showNextPhaseModal() {
     // Pausar o jogo quando mostrar o modal
     isPaused = true;
     clearInterval(timerInterval);
+    
+    // Ganhar uma vida ao completar a fase
+    gainLife();
     
     const modal = document.getElementById('nextPhaseModal');
     document.getElementById('currentPhase').textContent = currentPhase;
@@ -148,6 +175,10 @@ function showNextPhaseModal() {
     // Calcular taxa de acerto
     const totalAttempts = phaseStats.corrects + phaseStats.errors;
     const successRate = ((phaseStats.corrects / totalAttempts) * 100).toFixed(1);
+    
+    // Adicionar mensagem sobre a vida extra
+    const lifeGainedMessage = lives < MAX_LIVES ? 
+        '<div class="bonus-life"><i class="fas fa-heart"></i> Vida extra conquistada!</div>' : '';
     
     // Atualizar o conteúdo do modal
     const statsHtml = `
@@ -169,6 +200,7 @@ function showNextPhaseModal() {
                 <span>Tempo Total: ${minutes}m ${seconds}s</span>
             </div>
         </div>
+        ${lifeGainedMessage}
     `;
     
     // Inserir as estatísticas no modal
@@ -870,4 +902,28 @@ document.getElementById('timer').addEventListener('click', () => pauseGame(PAUSE
 
 // Adicionar event listener para o botão de retomar
 document.getElementById('resumeGame').addEventListener('click', resumeGame);
+
+// Atualizar a função para ajustar o zoom
+function adjustZoom() {
+    const container = document.querySelector('.container');
+    const windowHeight = window.innerHeight;
+    const contentHeight = container.scrollHeight;
+    
+    // Calcular o zoom necessário (com uma pequena margem de segurança)
+    // Adicionando 0.06 (6%) ao cálculo
+    // let zoomLevel = ((windowHeight / (contentHeight + 40)) * 0.95) + 0.06;
+
+    // Removendo a 'margem de segurança' pois o zoom já é suficiente.
+    let zoomLevel = ((windowHeight / (contentHeight)));
+    
+    // Limitar o zoom entre 0.5 e 1 para evitar distorções extremas
+    zoomLevel = Math.min(Math.max(zoomLevel, 0.5), 1);
+    
+    // Aplicar o zoom
+    document.body.style.zoom = zoomLevel;
+}
+
+// Adicionar chamada da função no carregamento e no redimensionamento
+window.addEventListener('load', adjustZoom);
+window.addEventListener('resize', adjustZoom);
   

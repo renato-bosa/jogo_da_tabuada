@@ -7,6 +7,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
 .container {
@@ -628,4 +629,28 @@ button:hover {
 
 .reset-btn:hover {
     background: linear-gradient(45deg, #e67e22, #d35400);
+}
+
+.bonus-life {
+    color: #ff4757;
+    font-size: 1.2em;
+    margin: 15px 0;
+    padding: 10px;
+    background-color: rgba(255, 71, 87, 0.1);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    animation: pulseHeart 1s infinite;
+}
+
+@keyframes pulseHeart {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.bonus-life i {
+    color: #ff4757;
 } 
