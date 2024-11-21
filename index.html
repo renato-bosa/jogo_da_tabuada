@@ -67,7 +67,7 @@
             <div id="timer">30</div>
             <div id="question"></div>
             <input type="number" id="answer" placeholder="Digite sua resposta">
-            <button onclick="checkAnswer()">Verificar</button>
+            <button onclick="checkAnswer()" class="check-btn">Verificar</button>
             
             <div class="history-container">
                 <h3>Últimas tentativas:</h3>
@@ -87,6 +87,9 @@
             <div class="action-buttons">
                 <button id="configBtn" class="action-btn config-btn">
                     <i class="fas fa-cog"></i> Configurações
+                </button>
+                <button id="showHighScores" class="action-btn trophy-btn-mobile">
+                    <i class="fas fa-trophy"></i> Ranking
                 </button>
                 <button id="restartBtn" class="action-btn restart-btn" title="Reiniciar Jogo">
                     <i class="fas fa-redo-alt"></i> Reiniciar

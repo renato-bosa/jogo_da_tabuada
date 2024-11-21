@@ -653,4 +653,62 @@ button:hover {
 
 .bonus-life i {
     color: #ff4757;
-} 
+}
+
+@media screen and (max-height: 1000px) {
+    /* Ajustar o container do input e botão */
+    input {
+        display: inline-block;
+        width: 205px;
+        margin-bottom: 0;
+        vertical-align: middle;
+    }
+
+    .check-btn {
+        display: inline-block;
+        padding: 20px 15px;
+        font-size: 1em;
+        margin: 0 0 0 10px;
+        vertical-align: middle;
+    }
+
+    #question {
+        margin: 15px 0;
+    }
+
+    .game-info {
+        margin-bottom: 10px;
+    }
+}
+
+/* Adicionar classes para controlar a visibilidade do botão de ranking */
+.trophy-btn-mobile {
+    display: none;
+    background: linear-gradient(45deg, #ffd700, #daa520);
+}
+
+@media screen and (max-width: 560px) {
+    .trophy-btn {
+        display: none; /* Oculta o botão do topo */
+    }
+
+    .trophy-btn-mobile {
+        display: flex; /* Mostra o botão na área de ações */
+    }
+}
+
+/* Ajustar o estilo dos botões de ação para acomodar 3 botões */
+@media screen and (max-width: 560px) {
+    .action-buttons {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .action-btn {
+        min-width: 120px; /* Garante um tamanho mínimo para os botões */
+    }
+    button {
+        margin: 0 auto !important;
+    }
+}
