@@ -852,8 +852,12 @@ document.getElementById('playerName').addEventListener('keypress', function(even
     }
 });
 
-// Adicionar event listeners para o modal de high scores
-document.getElementById('showHighScores').addEventListener('click', function() {
+// Atualizar os event listeners para os botões de high scores
+document.getElementById('showHighScores').addEventListener('click', showHighScoresModal);
+document.getElementById('showHighScoresMobile').addEventListener('click', showHighScoresModal);
+
+// Criar função separada para mostrar o modal (evitar duplicação de código)
+function showHighScoresModal() {
     const modal = document.getElementById('highScoresModal');
     const highScoresList = document.getElementById('highScoresListModal');
     const scores = loadHighScores();
@@ -869,11 +873,7 @@ document.getElementById('showHighScores').addEventListener('click', function() {
         .join('');
     
     modal.style.display = 'block';
-});
-
-document.getElementById('closeHighScores').addEventListener('click', function() {
-    document.getElementById('highScoresModal').style.display = 'none';
-});
+}
 
 // Atualizar o event listener de clique fora do modal para incluir o novo modal
 window.addEventListener('click', function(event) {
