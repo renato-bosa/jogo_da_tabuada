@@ -221,7 +221,8 @@ let isPaused = true;
 const PAUSE_TYPES = {
     INITIAL: 'initial',
     TIMER_CLICK: 'timer_click',
-    NEXT_PHASE: 'next_phase'
+    NEXT_PHASE: 'next_phase',
+    WRONG_ANSWER: 'wrong_answer'
 };
 
 // Atualizar função pauseGame para aceitar o tipo de pausa
@@ -482,9 +483,8 @@ function checkAnswer() {
     if (userAnswer === currentQuestion.answer) {
         playSound('correctSound');
         score += 10;
-        phaseStats.corrects++; // Registrar acerto
+        phaseStats.corrects++;
         
-        // Aumenta o mastery level
         const key = `${currentQuestion.num1}x${currentQuestion.num2}`;
         if (questions[key].masteryLevel < 2) {
             questions[key].masteryLevel++;
@@ -496,11 +496,28 @@ function checkAnswer() {
         scoreElement.classList.add('score-highlight');
     } else {
         playSound('wrongSound');
-        phaseStats.errors++; // Registrar erro
+        phaseStats.errors++;
         const key = `${currentQuestion.num1}x${currentQuestion.num2}`;
-        questions[key].masteryLevel = 0; // Reset mastery level on error
+        questions[key].masteryLevel = 0;
+        
+        // Pausar o jogo e mostrar a resposta correta
+        isPaused = true;
+        document.getElementById('game').classList.add('game-paused');
+        
+        // Atualizar e mostrar o modal de resposta incorreta
+        const modal = document.getElementById('wrongAnswerModal');
+        modal.querySelector('.question-display').textContent = 
+            `${currentQuestion.num1} × ${currentQuestion.num2}`;
+        modal.querySelector('.correct-answer').textContent = 
+            currentQuestion.answer;
+        modal.style.display = 'block';
+        
+        // Focar no botão OK
+        document.getElementById('continueAfterWrong').focus();
+        
         loseLife();
         updateHistory(false);
+        return; // Interrompe a execução aqui
     }
     
     saveProgress();
@@ -622,6 +639,15 @@ window.addEventListener('load', () => {
     isPaused = true;
     document.getElementById('game').classList.add('game-paused');
     pauseGame(PAUSE_TYPES.INITIAL);
+    
+    // Carregar fase mais alta alcançada
+    const savedHighestPhase = localStorage.getItem('highestPhase');
+    if (savedHighestPhase) {
+        highestPhase = parseInt(savedHighestPhase);
+    } else {
+        highestPhase = 2;
+        localStorage.setItem('highestPhase', highestPhase);
+    }
 });
 
 // Salvar configurações quando mudar
@@ -668,6 +694,12 @@ function updateHistory(isCorrect) {
 // Adiciona handler para o botão de próxima fase
 document.getElementById('startNextPhase').addEventListener('click', function() {
     currentPhase++;
+    // Atualizar a fase mais alta se necessário
+    if (currentPhase > highestPhase) {
+        highestPhase = currentPhase;
+        localStorage.setItem('highestPhase', highestPhase);
+    }
+    
     localStorage.setItem('currentPhase', currentPhase);
     initializePhaseQuestions(currentPhase);
     updateProgressBar();
@@ -681,13 +713,29 @@ document.getElementById('startNextPhase').addEventListener('click', function() {
     generateQuestion();
 });
 
-// Adicionar função para mudar de fase
+// Atualizar a função changePhase para usar highestPhase
 function changePhase(newPhase) {
-    if (newPhase >= 2 && newPhase <= currentPhase) {
+    if (newPhase >= 2 && newPhase <= highestPhase) {
         currentPhase = newPhase;
         localStorage.setItem('currentPhase', currentPhase);
         initializePhaseQuestions(currentPhase);
-        updateProgressBar();
+        
+        // Atualizar a barra de progresso usando highestPhase
+        document.querySelectorAll('.phase').forEach(phase => {
+            const phaseNumber = parseInt(phase.dataset.phase);
+            if (phaseNumber <= highestPhase) {
+                phase.classList.remove('locked');
+                if (phaseNumber === currentPhase) {
+                    phase.innerHTML = `<i class="fas fa-calculator"></i><span>${phaseNumber}</span>`;
+                } else {
+                    phase.innerHTML = `<i class="fas fa-check"></i><span>${phaseNumber}</span>`;
+                }
+            } else {
+                phase.classList.add('locked');
+                phase.innerHTML = `<i class="fas fa-lock"></i><span>${phaseNumber}</span>`;
+            }
+        });
+        
         generateQuestion();
     }
 }
@@ -930,5 +978,24 @@ window.addEventListener('resize', adjustZoom);
 // Adicionar event listener para o botão de fechar o modal de ranking
 document.getElementById('closeHighScores').addEventListener('click', function() {
     document.getElementById('highScoresModal').style.display = 'none';
+});
+
+// Adicionar event listener para o botão OK do modal de resposta incorreta
+document.getElementById('continueAfterWrong').addEventListener('click', function() {
+    document.getElementById('wrongAnswerModal').style.display = 'none';
+    isPaused = false;
+    document.getElementById('game').classList.remove('game-paused');
+    
+    // Continuar o jogo
+    saveProgress();
+    updateDisplay();
+    generateQuestion();
+});
+
+// Adicionar event listener para permitir pressionar Enter para continuar
+document.addEventListener('keypress', function(event) {
+    if (event.key === 'Enter' && document.getElementById('wrongAnswerModal').style.display === 'block') {
+        document.getElementById('continueAfterWrong').click();
+    }
 });
   
