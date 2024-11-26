@@ -926,4 +926,9 @@ function adjustZoom() {
 // Adicionar chamada da função no carregamento e no redimensionamento
 window.addEventListener('load', adjustZoom);
 window.addEventListener('resize', adjustZoom);
+
+// Adicionar event listener para o botão de fechar o modal de ranking
+document.getElementById('closeHighScores').addEventListener('click', function() {
+    document.getElementById('highScoresModal').style.display = 'none';
+});
   
