@@ -336,14 +336,43 @@ button:hover {
 
 /* Estilos para a barra de progresso */
 .progress-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     background: rgba(255, 255, 255, 0.9);
     padding: 15px;
     border-radius: 15px;
     margin-bottom: 20px;
+}
+
+.progress-bar h2 {
+    color: #1e3c72;
+    margin: 0 0 15px 0;
+    font-size: 1.4em;
+}
+
+.phases-container {
+    position: relative;
+    padding: 10px 0;
+}
+
+.phases {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     gap: 10px;
+    position: relative;
+    z-index: 2;
+}
+
+.phase-line {
+    position: absolute;
+    top: 50%;
+    left: 25px;
+    right: 25px;
+    height: 4px;
+    background: #ccc;
+    transform: translateY(-50%);
+    z-index: 1;
+    border-radius: 2px;
+    transition: all 0.3s ease;
 }
 
 .phase {
@@ -359,11 +388,37 @@ button:hover {
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
+    z-index: 2;
+    border: 3px solid white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 .phase.locked {
     background: #ccc;
     cursor: not-allowed;
+}
+
+/* Adicionar estilo para a linha de progresso */
+.phase:not(.locked) ~ .phase:not(.locked) {
+    position: relative;
+}
+
+.phase:not(.locked) ~ .phase:not(.locked)::before {
+    content: '';
+    position: absolute;
+    left: -35px;
+    top: 50%;
+    width: 30px;
+    height: 4px;
+    background: #4CAF50;
+    transform: translateY(-50%);
+    z-index: 1;
+}
+
+/* Ajustar hover e animações */
+.phase:not(.locked):hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
 }
 
 .phase span {
@@ -373,11 +428,13 @@ button:hover {
 
 .phase i {
     font-size: 0.9em;
+    margin-bottom: 2px;
 }
 
-.phase:not(.locked):hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+/* Adicionar estilo para a linha de progresso atual */
+@keyframes progressLine {
+    from { width: 0; }
+    to { width: 100%; }
 }
 
 /* Estilos para o modal de próxima fase */
@@ -679,6 +736,10 @@ button:hover {
     .game-info {
         margin-bottom: 10px;
     }
+
+    .progress-bar-title {
+        margin-bottom: 0 !important;
+    }
 }
 
 /* Adicionar classes para controlar a visibilidade do botão de ranking */
@@ -711,4 +772,32 @@ button:hover {
     button {
         margin: 0 auto !important;
     }
+}
+
+/* Estilos para o modal de resposta incorreta */
+.wrong-answer-info {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.wrong-answer-info .question-display {
+    font-size: 2em;
+    color: #1e3c72;
+    font-weight: bold;
+    margin: 15px 0;
+}
+
+.wrong-answer-info .correct-answer {
+    color: #229e56;
+    font-size: 2em;
+    font-weight: bold;
+    background-color: #f8f9fa;
+    padding: 5px 10px;
+}
+
+.modal-content h2 i.fa-times-circle {
+    color: #ff4757;
 }
