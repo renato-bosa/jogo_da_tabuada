@@ -17,37 +17,43 @@
         </div>
 
         <div class="progress-bar">
-            <div class="phase" data-phase="2">
-                <i class="fas fa-calculator"></i>
-                <span>2</span>
-            </div>
-            <div class="phase locked" data-phase="3">
-                <i class="fas fa-lock"></i>
-                <span>3</span>
-            </div>
-            <div class="phase locked" data-phase="4">
-                <i class="fas fa-lock"></i>
-                <span>4</span>
-            </div>
-            <div class="phase locked" data-phase="5">
-                <i class="fas fa-lock"></i>
-                <span>5</span>
-            </div>
-            <div class="phase locked" data-phase="6">
-                <i class="fas fa-lock"></i>
-                <span>6</span>
-            </div>
-            <div class="phase locked" data-phase="7">
-                <i class="fas fa-lock"></i>
-                <span>7</span>
-            </div>
-            <div class="phase locked" data-phase="8">
-                <i class="fas fa-lock"></i>
-                <span>8</span>
-            </div>
-            <div class="phase locked" data-phase="9">
-                <i class="fas fa-lock"></i>
-                <span>9</span>
+            <h2 class="progress-bar-title">Fases</h2>
+            <div class="phases-container">
+                <div class="phase-line"></div>
+                <div class="phases">
+                    <div class="phase" data-phase="2">
+                        <i class="fas fa-calculator"></i>
+                        <span>2</span>
+                    </div>
+                    <div class="phase locked" data-phase="3">
+                        <i class="fas fa-lock"></i>
+                        <span>3</span>
+                    </div>
+                    <div class="phase locked" data-phase="4">
+                        <i class="fas fa-lock"></i>
+                        <span>4</span>
+                    </div>
+                    <div class="phase locked" data-phase="5">
+                        <i class="fas fa-lock"></i>
+                        <span>5</span>
+                    </div>
+                    <div class="phase locked" data-phase="6">
+                        <i class="fas fa-lock"></i>
+                        <span>6</span>
+                    </div>
+                    <div class="phase locked" data-phase="7">
+                        <i class="fas fa-lock"></i>
+                        <span>7</span>
+                    </div>
+                    <div class="phase locked" data-phase="8">
+                        <i class="fas fa-lock"></i>
+                        <span>8</span>
+                    </div>
+                    <div class="phase locked" data-phase="9">
+                        <i class="fas fa-lock"></i>
+                        <span>9</span>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -172,6 +178,19 @@
             <h2><i class="fas fa-pause"></i> Jogo Pausado</h2>
             <button id="resumeGame" class="action-btn">
                 <i class="fas fa-play"></i> Continuar Jogo
+            </button>
+        </div>
+    </div>
+
+    <!-- Adicionar novo modal de resposta incorreta -->
+    <div id="wrongAnswerModal" class="modal">
+        <div class="modal-content">
+            <h2><i class="fas fa-times-circle"></i> Veja a resposta correta:</h2>
+            <div class="wrong-answer-info">
+                <span class="question-display"></span><span style="font-weight: bold; font-size: 2em;"> = </span><span class="correct-answer"></span>
+            </div>
+            <button id="continueAfterWrong" class="action-btn">
+                <i class="fas fa-check"></i> OK
             </button>
         </div>
     </div>
