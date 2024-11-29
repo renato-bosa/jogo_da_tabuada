@@ -92,42 +92,54 @@
             
             <div class="action-buttons">
                 <button id="configBtn" class="action-btn config-btn">
-                    <i class="fas fa-cog"></i> Configurações
+                    <i class="fas fa-plus"></i> Nova Partida
                 </button>
                 <button id="showHighScoresMobile" class="action-btn trophy-btn-mobile">
                     <i class="fas fa-trophy"></i> Ranking
                 </button>
-                <button id="restartBtn" class="action-btn restart-btn" title="Reiniciar Jogo">
-                    <i class="fas fa-redo-alt"></i> Reiniciar
+                <button id="showSavedGames" class="action-btn load-btn">
+                    <i class="fas fa-folder-open"></i> Partidas Salvas
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Configurações -->
+    <!-- Atualizar o modal de configurações para nova partida -->
     <div id="configModal" class="modal">
         <div class="modal-content">
-            <h2>Configurações <i class="fas fa-cog"></i></h2>
-            <div class="config-option">
-                <label for="difficulty">Dificuldade:</label>
-                <select id="difficulty">
-                    <option value="easy">Fácil (30s)</option>
-                    <option value="medium">Médio (15s)</option>
-                    <option value="hard">Difícil (10s)</option>
-                </select>
-            </div>
-            <div class="config-option">
-                <label for="lives-count">Vidas:</label>
-                <select id="lives-count">
-                    <option value="3">3 Vidas</option>
-                    <option value="4">4 Vidas</option>
-                </select>
-            </div>
-            <button id="saveConfig" class="save-btn">Salvar</button>
-            <button id="resetHighScores" class="reset-btn">
-                <i class="fas fa-trophy"></i> Limpar Ranking
+            <button id="backToMenu" class="back-to-menu-btn">
+                <i class="fas fa-arrow-left"></i> Voltar ao Menu
             </button>
-            <button id="closeModal" class="close-btn">&times;</button>
+            <h2><i class="fas fa-plus"></i> Nova Partida</h2>
+            <div class="config-option">
+                <label for="playerName">Nome do Jogador:</label>
+                <input type="text" id="newGamePlayerName" maxlength="20" placeholder="Digite seu nome">
+            </div>
+            <button id="toggleAdvanced" class="toggle-advanced-btn" title="Opções Avançadas">
+                <i class="fas fa-cog"></i>
+            </button>
+            <div id="advancedOptions" class="advanced-options">
+                <div class="config-option">
+                    <label for="difficulty">Dificuldade:</label>
+                    <select id="difficulty">
+                        <option value="easy">Fácil (30s)</option>
+                        <option value="medium">Médio (15s)</option>
+                        <option value="hard">Difícil (10s)</option>
+                    </select>
+                </div>
+                <div class="config-option" style="display: none;">
+                    <label for="lives-count">Vidas:</label>
+                    <select id="lives-count">
+                        <option value="3">3 Vidas</option>
+                        <option value="4">4 Vidas</option>
+                        <option value="5" selected>5 Vidas</option>
+                    </select>
+                </div>
+            </div>
+            <button id="saveConfig" class="menu-action-btn new-game-btn">
+                <i class="fas fa-play"></i> Iniciar Jogo
+            </button>
+            <button id="closeModal" class="close-btn" style="display: none;">&times;</button>
         </div>
     </div>
 
@@ -146,18 +158,18 @@
     <!-- Atualizar o modal de Game Over -->
     <div id="gameOverModal" class="modal">
         <div class="modal-content">
-            <h2>Fim de Jogo!</h2>
-            <p>Pontuação final: <span id="finalScore">0</span></p>
-            <div class="player-name-input">
-                <label for="playerName">Digite seu nome:</label>
-                <input type="text" id="playerName" maxlength="20" placeholder="Seu nome">
-            </div>
+            <h2><i class="fas fa-trophy"></i> Fim de Jogo!</h2>
+            <p class="game-over-info">
+                Jogador: <span class="player-name-display"></span><br>
+                Pontuação final: <span id="finalScore">0</span>
+            </p>
             <div class="high-scores">
                 <h3>Melhores Pontuações</h3>
                 <div id="highScoresList"></div>
             </div>
-            <button id="saveScore" class="save-btn">Salvar Pontuação</button>
-            <button id="restartGame" class="action-btn restart-btn">Jogar Novamente</button>
+            <button id="restartGame" class="menu-action-btn new-game-btn">
+                <i class="fas fa-plus"></i> Nova Partida
+            </button>
         </div>
     </div>
 
@@ -168,6 +180,9 @@
             <div class="high-scores">
                 <div id="highScoresListModal"></div>
             </div>
+            <button id="resetHighScores" class="menu-action-btn reset-btn" style="display: none;">
+                <i class="fas fa-trash"></i> Limpar Ranking
+            </button>
             <button id="closeHighScores" class="close-btn">&times;</button>
         </div>
     </div>
@@ -198,5 +213,22 @@
     <audio id="correctSound" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
     <audio id="wrongSound" src="https://assets.mixkit.co/active_storage/sfx/2001/2001-preview.mp3"></audio>
     <script src="script_refatorado.js"></script>
+
+    <!-- Atualizar o modal de jogos salvos para menu -->
+    <div id="savedGamesModal" class="modal">
+        <div class="modal-content">
+            <h2><i class="fas fa-bars"></i> Menu do Jogo</h2>
+            <button id="newGameBtn" class="menu-action-btn new-game-btn">
+                <i class="fas fa-plus"></i> Nova Partida
+            </button>
+            <div class="saved-games-section">
+                <h3>Partidas Salvas:</h3>
+                <div class="saved-games-list" id="savedGamesList">
+                    <!-- Lista de partidas será inserida aqui -->
+                </div>
+            </div>
+            <button id="closeSavedGames" class="close-btn">&times;</button>
+        </div>
+    </div>
 </body>
 </html> 

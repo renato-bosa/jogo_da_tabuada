@@ -8,15 +8,16 @@ body {
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    transition: background 1s ease;
 }
 
 .container {
     max-width: 600px;
     width: 90%;
     padding: 30px;
-    background-color: rgba(255, 255, 255, 0.95);
+    background-color: rgba(255, 255, 255, 0.97);
     border-radius: 20px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     text-align: center;
 }
 
@@ -146,7 +147,7 @@ button:hover {
 }
 
 .config-btn {
-    margin-top: 20px;
+    margin-top: 0px;
     background: linear-gradient(45deg, #2c3e50, #3498db);
     font-size: 1em;
     padding: 10px 20px;
@@ -677,7 +678,7 @@ button:hover {
 
 /* Adicionar estilo para o botão de reset do ranking */
 .reset-btn {
-    background: linear-gradient(45deg, #d35400, #e67e22);
+    background: linear-gradient(45deg, #ff4757, #c0392b);
     color: white;
     margin-top: 10px;
     font-size: 1em;
@@ -800,4 +801,290 @@ button:hover {
 
 .modal-content h2 i.fa-times-circle {
     color: #ff4757;
+}
+
+.saved-games-list {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 20px 0;
+}
+
+.saved-game-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    transition: transform 0.2s;
+    border-right: 1px solid #c0c0c0;
+    border-bottom: 1px solid #c0c0c0;
+    border-left: 1px solid #e0e0e0;
+    border-top: 1px solid #e0e0e0;
+}
+
+.saved-game-item:hover {
+    /* transform: translateX(5px); */
+    background: #e9ecef;
+}
+
+.game-info-container {
+    flex-grow: 1;
+}
+
+.game-title {
+    font-weight: bold;
+    color: #1e3c72;
+    margin-bottom: 5px;
+}
+
+.game-details {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.game-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.game-action-btn {
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+    color: white;
+    font-size: 0.9em;
+    transition: transform 0.2s;
+}
+
+.game-action-btn:hover {
+    transform: scale(1.05);
+}
+
+.load-game-btn {
+    background: linear-gradient(45deg, #2ed573, #1e3c72);
+}
+
+.delete-game-btn {
+    background: linear-gradient(45deg, #ff4757, #c0392b);
+}
+
+.no-saved-games {
+    text-align: center;
+    color: #666;
+    padding: 20px;
+    font-style: italic;
+}
+
+/* Adicionar aos estilos dos action-btn */
+.save-btn {
+    background: linear-gradient(45deg, #27ae60, #2ecc71);
+}
+
+.load-btn {
+    background: linear-gradient(45deg, #e67e22, #d35400);
+}
+
+/* Atualizar estilos do botão de menu */
+.menu-btn {
+    background: linear-gradient(45deg, #2c3e50, #3498db);
+}
+
+/* Adicionar estilos para o menu */
+.saved-games-section {
+    margin-top: 20px;
+}
+
+.saved-games-section h3 {
+    color: #1e3c72;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+}
+
+.menu-action-btn {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    color: white;
+    cursor: pointer;
+    transition: transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.menu-action-btn:hover {
+    transform: scale(1.02);
+}
+
+.new-game-btn {
+    background: linear-gradient(45deg, #27ae60, #2ecc71);
+}
+
+/* Atualizar os estilos do input de nome no modal de nova partida */
+.config-option input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #3498db;
+    border-radius: 8px;
+    font-size: 1em;
+    margin-top: 5px;
+    box-sizing: border-box; /* Garantir que padding e borda sejam incluídos na largura */
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.config-option input[type="text"]:focus {
+    outline: none;
+    border-color: #2980b9;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+}
+
+.config-option input[type="text"]::placeholder {
+    color: #95a5a6;
+}
+
+/* Adicionar estilos para o game over */
+.game-over-info {
+    font-size: 1.2em;
+    color: #2c3e50;
+    margin: 20px 0;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.game-over-info .player-name-display {
+    color: #1e3c72;
+    font-weight: bold;
+}
+
+/* Adicionar estilos para as opções avançadas */
+.advanced-options {
+    display: none;
+    margin-top: 0px;
+    padding-top: 0px;
+    border-top: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.advanced-options.show {
+    display: block;
+    animation: slideDown 0.3s ease;
+}
+
+.toggle-advanced-btn {
+    width: auto;
+    padding: 8px;
+    margin: 0;
+    background: none;
+    border: none;
+    color: #333;
+    font-size: 1.2em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
+    position: absolute;
+    right: 25px;
+    top: 65px;
+}
+
+.toggle-advanced-btn:hover {
+    transform: rotate(90deg);
+}
+
+.toggle-advanced-btn.active {
+    transform: rotate(90deg);
+}
+
+/* Ajustar margem do primeiro config-option para dar espaço à engrenagem */
+.config-option:first-child {
+    margin-right: 40px;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Adicionar estilo para o botão de voltar */
+.back-btn {
+    background: linear-gradient(45deg, #95a5a6, #7f8c8d);
+    margin-top: 10px;
+}
+
+/* Ajustar espaçamento entre os botões */
+.menu-action-btn + .menu-action-btn {
+    margin-top: 10px;
+}
+
+/* Atualizar estilo do botão de voltar ao menu */
+.back-to-menu-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 1em;
+    cursor: pointer;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.3s;
+}
+
+.back-to-menu-btn:hover {
+    color: #333;
+    transform: none;
+}
+
+/* Ajustar margem do título para não sobrepor o botão de voltar */
+.modal-content h2 {
+    margin-top: 20px;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.score-item.pulse-animation {
+    animation: pulse 1s infinite;
+    background-color: rgba(46, 213, 115, 0.1); /* Verde suave */
+    border-radius: 8px;
+}
+
+.game-over-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
+    background: linear-gradient(45deg, #ff4757, #c0392b);
+    color: white;
+    border-radius: 5px;
+    font-size: 0.8em;
+    opacity: 0.3;
+    max-width: 50px;
+}
+
+.game-over-badge i {
+    font-size: 1.1em;
+}
+
+.no-margin-bottom {
+    margin-bottom: 0 !important;
 }

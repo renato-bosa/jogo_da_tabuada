@@ -1,19 +1,23 @@
 class GameState {
     constructor() {
-        // Estado do jogo
+        // Estado do jogo atual
+        this.currentGameId = null;
+        this.playerName = '';
+        this.createdAt = new Date();
+        this.lastPlayedAt = new Date();
         this.isPaused = true;
         this.currentPhase = 2;
         this.highestPhase = 2;
         this.currentQuestion = {};
         this.score = 0;
-        this.lives = 4;
+        this.lives = 5;
         this.timer = 30;
         this.timerInterval = null;
         this.attemptsHistory = [];
         
         // Constantes
         this.MAX_HISTORY = 5;
-        this.MAX_LIVES = 4;
+        this.MAX_LIVES = 5;
         this.MAX_HIGH_SCORES = 5;
         
         // Configurações
@@ -42,6 +46,12 @@ class GameState {
             totalTime: 0,
             startTime: null
         };
+
+        // Armazenamento de todas as partidas
+        this.savedGames = {};
+
+        // Carregar jogos salvos ao inicializar
+        this.loadSavedGames();
     }
 
     // Métodos para gerenciar o estado
@@ -87,8 +97,37 @@ class GameState {
         if (savedQuestions) this.questions = JSON.parse(savedQuestions);
     }
 
+    listAllSavedGames() {
+        return Object.values(this.savedGames)
+            .sort((a, b) => new Date(b.lastPlayedAt) - new Date(a.lastPlayedAt));
+    }
+
+    loadGame(gameId) {
+        const game = this.savedGames[gameId];
+        if (!game) return false;
+        
+        this.currentGameId = gameId;
+        this.playerName = game.playerName;
+        this.createdAt = new Date(game.createdAt);
+        this.lastPlayedAt = new Date(game.lastPlayedAt);
+        this.isPaused = true;
+        this.currentPhase = game.currentPhase;
+        this.highestPhase = game.highestPhase;
+        this.score = game.score;
+        this.lives = game.lives;
+        this.currentDifficulty = game.currentDifficulty;
+        this.questions = { ...game.questions };
+        this.attemptsHistory = [];
+        
+        return true;
+    }
+
     reset() {
+        // Resetar fase atual e mais alta
         this.currentPhase = 2;
+        this.highestPhase = 2;
+        
+        // Resetar outros valores
         this.score = 0;
         this.lives = this.MAX_LIVES;
         this.attemptsHistory = [];
@@ -99,13 +138,95 @@ class GameState {
             totalTime: 0,
             startTime: Date.now()
         };
+        
+        // Limpar localStorage
+        localStorage.removeItem('currentPhase');
+        localStorage.removeItem('highestPhase');
+        localStorage.removeItem('score');
+        localStorage.removeItem('lives');
+        localStorage.removeItem('questions');
+    }
+
+    saveCurrentGame() {
+        // Se não houver ID atual, criar um novo
+        if (!this.currentGameId) {
+            this.currentGameId = crypto.randomUUID();
+        }
+        
+        // Atualizar ou criar partida
+        this.savedGames[this.currentGameId] = {
+            id: this.currentGameId,
+            playerName: this.playerName,
+            createdAt: this.createdAt,
+            lastPlayedAt: new Date(),
+            isPaused: true,
+            currentPhase: this.currentPhase,
+            highestPhase: this.highestPhase,
+            score: this.score,
+            lives: this.lives,
+            currentDifficulty: this.currentDifficulty,
+            questions: { ...this.questions }
+        };
+        
+        localStorage.setItem('savedGames', JSON.stringify(this.savedGames));
+        return this.currentGameId;
+    }
+
+    deleteGame(gameId) {
+        if (this.savedGames[gameId]) {
+            delete this.savedGames[gameId];
+            localStorage.setItem('savedGames', JSON.stringify(this.savedGames));
+            return true;
+        }
+        return false;
+    }
+
+    loadSavedGames() {
+        const savedGames = localStorage.getItem('savedGames');
+        if (savedGames) {
+            this.savedGames = JSON.parse(savedGames);
+        }
+    }
+
+    createNewGame(playerName) {
+        this.reset();
+        this.currentGameId = crypto.randomUUID();
+        this.playerName = playerName;
+        this.createdAt = new Date();
+        this.lastPlayedAt = new Date();
     }
 }
 
 class GameController {
     constructor() {
         this.gameState = new GameState();
+        this.backgroundImages = {
+            2: 'https://img.freepik.com/free-vector/space-background-with-abstract-shape-stars_189033-30.jpg',
+            3: 'https://img.freepik.com/free-vector/gradient-galaxy-background_23-2148983655.jpg',
+            4: 'https://img.freepik.com/free-vector/realistic-galaxy-background_23-2148991322.jpg',
+            5: 'https://img.freepik.com/free-vector/hand-painted-watercolor-galaxy-background_23-2148989262.jpg',
+            6: 'https://img.freepik.com/free-vector/gradient-nebula-background_23-2148983654.jpg',
+            7: 'https://img.freepik.com/free-vector/watercolor-galaxy-background-design_23-2148482263.jpg',
+            8: 'https://img.freepik.com/free-vector/realistic-galaxy-background_52683-12122.jpg',
+            9: 'https://img.freepik.com/free-vector/colorful-galaxy-background_23-2148982258.jpg'
+        };
         this.initializeEventListeners();
+    }
+
+    // Adicionar novo método para atualizar o background
+    updateBackground() {
+        if (!this.gameState.playerName) {
+            document.body.style.background = 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)';
+            return;
+        }
+
+        const currentPhase = this.gameState.getCurrentPhase();
+        const backgroundImage = this.backgroundImages[currentPhase];
+        
+        if (backgroundImage) {
+            document.body.style.background = `url('${backgroundImage}') no-repeat center center fixed`;
+            document.body.style.backgroundSize = 'cover';
+        }
     }
 
     initializeEventListeners() {
@@ -169,11 +290,9 @@ class GameController {
         });
 
         // Botão de reiniciar jogo
-        document.getElementById('restartBtn').addEventListener('click', () => {
-            if (confirm('Tem certeza que deseja reiniciar o jogo? Todo o progresso será perdido.')) {
-                this.resetProgress();
-                document.getElementById('configModal').style.display = 'none';
-            }
+        document.getElementById('newGameBtn').addEventListener('click', () => {
+            document.getElementById('savedGamesModal').style.display = 'none';
+            this.openConfigModal();
         });
 
         // Salvar configurações quando mudar dificuldade
@@ -181,28 +300,21 @@ class GameController {
             localStorage.setItem('gameDifficulty', e.target.value);
         });
 
-        // Enter no modal de resposta errada
-        /*
-        document.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && 
-                document.getElementById('wrongAnswerModal').style.display === 'block') {
-                this.continueAfterWrong();
-            }
-        });
-        */
-
         // Clique fora dos modais
         window.addEventListener('click', (e) => {
             const configModal = document.getElementById('configModal');
             const highScoresModal = document.getElementById('highScoresModal');
+            const savedGamesModal = document.getElementById('savedGamesModal');
             
-            if (e.target === configModal) {
+            if (e.target === configModal && this.gameState.playerName) {
                 configModal.style.display = 'none';
             }
             if (e.target === highScoresModal) {
                 highScoresModal.style.display = 'none';
             }
-            // Não fechar o modal de pausa ao clicar fora
+            if (e.target === savedGamesModal && this.gameState.playerName) {
+                savedGamesModal.style.display = 'none';
+            }
         });
 
         // Ajuste de zoom
@@ -220,6 +332,16 @@ class GameController {
         this.initializeConfigListeners();
         this.initializeGameOverListeners();
         this.initializePhaseListeners();
+
+        // Botão de mostrar jogos salvos
+        document.getElementById('showSavedGames').addEventListener('click', () => {
+            this.showSavedGamesModal();
+        });
+
+        // Botão de fechar modal de jogos salvos
+        document.getElementById('closeSavedGames').addEventListener('click', () => {
+            document.getElementById('savedGamesModal').style.display = 'none';
+        });
     }
 
     initializeConfigListeners() {
@@ -232,7 +354,20 @@ class GameController {
             this.saveConfig();
         });
 
-        // ... outros listeners relacionados a configurações
+        // Adicionar listener para o botão de opções avançadas
+        document.getElementById('toggleAdvanced').addEventListener('click', (e) => {
+            const advancedOptions = document.getElementById('advancedOptions');
+            const button = e.currentTarget;
+            
+            advancedOptions.classList.toggle('show');
+            button.classList.toggle('active');
+        });
+
+        // Adicionar listener para o botão de voltar ao menu
+        document.getElementById('backToMenu').addEventListener('click', () => {
+            document.getElementById('configModal').style.display = 'none';
+            this.showSavedGamesModal();
+        });
     }
 
     checkAnswer() {
@@ -283,6 +418,9 @@ class GameController {
         this.saveProgress();
         this.updateDisplay();
         this.generateQuestion();
+        
+        // Salvar após resposta correta
+        this.gameState.saveCurrentGame();
     }
 
     handleWrongAnswer() {
@@ -301,6 +439,10 @@ class GameController {
         this.showWrongAnswerModal();
         this.loseLife();
         this.updateHistory(false);
+        
+        // Salvar após resposta errada
+        this.gameState.saveCurrentGame();
+        
         console.log('handleWrongAnswer finalizado');
     }
 
@@ -414,12 +556,15 @@ class GameController {
         
         switch(pauseType) {
             case this.gameState.PAUSE_TYPES.INITIAL:
-                modalTitle.innerHTML = '<i class="fas fa-play"></i> Bem-vindo ao Jogo da Tabuada!';
+                /* modalTitle.innerHTML = '<i class="fas fa-play"></i> Bem-vindo ao Jogo da Tabuada!';*/
+                modalTitle.innerHTML = '<i class="fas fa-play"></i> Pronto para começar?';
                 resumeButton.innerHTML = '<i class="fas fa-play"></i> Iniciar Jogo';
+                /*
                 modalTitle.insertAdjacentHTML(
                     'afterend',
                     '<p class="pause-message">Pratique suas habilidades de multiplicação.<br />Pronto para começar?</p>'
                 );
+                */
                 break;
                 
             case this.gameState.PAUSE_TYPES.NEXT_PHASE:
@@ -461,6 +606,9 @@ class GameController {
                 this.gameState.lives--;
                 this.updateLives();
                 
+                // Salvar após perder vida
+                this.gameState.saveCurrentGame();
+                
                 if (this.gameState.lives <= 0) {
                     this.gameOver();
                 }
@@ -501,6 +649,9 @@ class GameController {
             }, 100);
             
             this.updateLives();
+            
+            // Salvar após ganhar vida
+            this.gameState.saveCurrentGame();
         }
     }
 
@@ -551,42 +702,15 @@ class GameController {
             .insertAdjacentHTML('afterend', statsHtml);
         
         modal.style.display = 'block';
+        
+        // Salvar aps completar fase
+        this.gameState.saveCurrentGame();
     }
 
     initializeGameOverListeners() {
         document.getElementById('restartGame').addEventListener('click', () => {
             document.getElementById('gameOverModal').style.display = 'none';
-            document.getElementById('saveScore').style.display = 'block';
-            document.getElementById('playerName').disabled = false;
-            
-            this.gameState.reset();
-            this.initializePhaseQuestions();
-            this.updateProgressBar();
-            this.updateDisplay();
-            
-            this.gameState.setIsPaused(true);
-            document.getElementById('game').classList.add('game-paused');
-            this.pauseGame(this.gameState.PAUSE_TYPES.INITIAL);
-            
-            this.generateQuestion();
-        });
-
-        document.getElementById('saveScore').addEventListener('click', () => {
-            const playerNameInput = document.getElementById('playerName');
-            const playerName = playerNameInput.value.trim();
-            
-            if (playerName) {
-                this.addHighScore(playerName, this.gameState.score);
-                playerNameInput.disabled = true;
-                document.getElementById('saveScore').style.display = 'none';
-            } else {
-                playerNameInput.style.borderColor = '#ff4757';
-                playerNameInput.placeholder = 'Digite seu nome primeiro!';
-                setTimeout(() => {
-                    playerNameInput.style.borderColor = '#1e3c72';
-                    playerNameInput.placeholder = 'Seu nome';
-                }, 2000);
-            }
+            this.openConfigModal(); // Abrir modal de nova partida
         });
     }
 
@@ -605,6 +729,7 @@ class GameController {
             
             this.gameState.setIsPaused(true);
             document.getElementById('game').classList.add('game-paused');
+            this.updateBackground();
             this.pauseGame(this.gameState.PAUSE_TYPES.NEXT_PHASE);
             
             this.generateQuestion();
@@ -625,6 +750,7 @@ class GameController {
             this.initializePhaseQuestions();
             this.updateProgressBar();
             this.generateQuestion();
+            this.updateBackground();
         }
     }
 
@@ -690,47 +816,49 @@ class GameController {
 
     gameOver() {
         const modal = document.getElementById('gameOverModal');
-        const playerNameInput = document.getElementById('playerName');
-        const saveScoreBtn = document.getElementById('saveScore');
-        
+        document.querySelector('.player-name-display').textContent = this.gameState.playerName;
         document.getElementById('finalScore').textContent = this.gameState.score;
-        playerNameInput.value = '';
-        playerNameInput.disabled = false;
-        playerNameInput.style.borderColor = '#1e3c72';
-        saveScoreBtn.disabled = false;
-        saveScoreBtn.textContent = 'Salvar Pontuação';
-        saveScoreBtn.style.backgroundColor = '';
         
+        // Adicionar a pontuação ao ranking automaticamente
+        this.addHighScore(this.gameState.playerName, this.gameState.score);
         this.updateHighScoresDisplay();
-        modal.style.display = 'block';
-        playerNameInput.focus();
         
-        this.gameState.lives = parseInt(localStorage.getItem('maxLives') || '4');
+        modal.style.display = 'block';
     }
 
     loadHighScores() {
-        return JSON.parse(localStorage.getItem('highScores')) || [];
+        // Obter todas as partidas salvas e ordená-las por pontuação
+        const savedGames = this.gameState.listAllSavedGames();
+        const uniqueScores = new Map();
+
+        // Para cada jogador, manter apenas a maior pontuação
+        savedGames.forEach(game => {
+            const existingScore = uniqueScores.get(game.playerName);
+            if (!existingScore || game.score > existingScore.score) {
+                uniqueScores.set(game.playerName, {
+                    name: game.playerName,
+                    score: game.score,
+                    date: game.lastPlayedAt
+                });
+            }
+        });
+
+        // Converter o Map para array e ordenar por pontuação
+        return Array.from(uniqueScores.values())
+            .sort((a, b) => b.score - a.score)
+            .slice(0, this.gameState.MAX_HIGH_SCORES);
     }
 
     saveHighScores(scores) {
-        localStorage.setItem('highScores', JSON.stringify(scores));
+        // Este método não é mais necessário pois os scores são derivados das partidas salvas
+        // Mantido para compatibilidade, mas não faz nada
+        return;
     }
 
     addHighScore(name, scoreValue) {
-        const newScore = { 
-            name, 
-            score: scoreValue, 
-            date: new Date().toISOString() 
-        };
-        
-        let highScores = this.loadHighScores();
-        highScores.push(newScore);
-        highScores.sort((a, b) => b.score - a.score);
-        highScores = highScores.slice(0, this.gameState.MAX_HIGH_SCORES);
-        
-        this.saveHighScores(highScores);
-        this.updateHighScoresDisplay(newScore);
-        
+        // Não precisamos mais salvar explicitamente no ranking
+        // Apenas retornamos a posição atual no ranking
+        const highScores = this.loadHighScores();
         return highScores.findIndex(s => s.name === name && s.score === scoreValue) + 1;
     }
 
@@ -740,13 +868,20 @@ class GameController {
         
         if (highScoresList) {
             highScoresList.innerHTML = scores
-                .map((score, index) => `
-                    <div class="score-item ${newScore && score.score === newScore.score && score.name === newScore.name ? 'highlight' : ''}">
-                        <span class="score-rank">#${index + 1}</span>
-                        <span class="score-name">${score.name}</span>
-                        <span class="score-value">${score.score}</span>
-                    </div>
-                `)
+                .map((score, index) => {
+                    // Verifica se este score é do jogo atual
+                    const isCurrentGame = this.gameState.currentGameId && 
+                        score.name === this.gameState.playerName && 
+                        score.score === this.gameState.score;
+                    
+                    return `
+                        <div class="score-item ${isCurrentGame ? 'pulse-animation' : ''} ${newScore && score.score === newScore.score && score.name === newScore.name ? 'highlight' : ''}">
+                            <span class="score-rank">#${index + 1}</span>
+                            <span class="score-name">${score.name}</span>
+                            <span class="score-value">${score.score}</span>
+                        </div>
+                    `;
+                })
                 .join('');
         }
     }
@@ -819,40 +954,76 @@ class GameController {
     }
 
     resetHighScores() {
-        if (confirm('Tem certeza que deseja limpar o ranking? Esta ação não pode ser desfeita.')) {
-            localStorage.removeItem('highScores');
+        if (confirm('Tem certeza que deseja limpar o ranking? Esta ação irá apagar todas as partidas salvas.')) {
+            // Limpar todas as partidas salvas
+            Object.keys(this.gameState.savedGames).forEach(gameId => {
+                this.gameState.deleteGame(gameId);
+            });
             this.updateHighScoresDisplay();
-            alert('Ranking limpo com sucesso!');
+            alert('Ranking e partidas salvas foram limpos com sucesso!');
         }
     }
 
     openConfigModal() {
-        document.getElementById('configModal').style.display = 'block';
-        document.getElementById('difficulty').value = this.gameState.currentDifficulty;
+        const modal = document.getElementById('configModal');
+        const closeButton = document.getElementById('closeModal');
+        const backButton = document.getElementById('backToMenu');
+        
+        document.getElementById('newGamePlayerName').value = '';
+        document.getElementById('difficulty').value = 'easy';
+        document.getElementById('lives-count').value = '4';
+        
+        // Mostrar/ocultar botões baseado no estado do jogo
+        if (!this.gameState.playerName) {
+            closeButton.style.display = 'none';
+            backButton.style.display = 'block';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        } else {
+            closeButton.style.display = 'block';
+            backButton.style.display = 'none';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        }
+        
+        // Resetar estado das opções avançadas
+        const advancedOptions = document.getElementById('advancedOptions');
+        const toggleButton = document.getElementById('toggleAdvanced');
+        advancedOptions.classList.remove('show');
+        toggleButton.classList.remove('active');
+        
+        modal.style.display = 'block';
+        document.getElementById('newGamePlayerName').focus();
     }
 
     saveConfig() {
+        const playerName = document.getElementById('newGamePlayerName').value.trim();
+        if (!playerName) {
+            const input = document.getElementById('newGamePlayerName');
+            input.style.borderColor = '#ff4757';
+            input.placeholder = 'Digite seu nome primeiro!';
+            setTimeout(() => {
+                input.style.borderColor = '#3498db';
+                input.placeholder = 'Digite seu nome';
+            }, 2000);
+            return;
+        }
+
         const newDifficulty = document.getElementById('difficulty').value;
-        const newLivesCount = parseInt(document.getElementById('lives-count').value);
-        let shouldUpdateDisplay = false;
+        const livesSelect = document.getElementById('lives-count');
+        const newLivesCount = livesSelect.parentElement.style.display === 'none' ? 5 : parseInt(livesSelect.value);
         
-        if (newDifficulty !== this.gameState.currentDifficulty) {
-            this.gameState.currentDifficulty = newDifficulty;
-            localStorage.setItem('gameDifficulty', this.gameState.currentDifficulty);
-            this.startTimer();
-        }
+        this.gameState.createNewGame(playerName);
+        this.gameState.currentDifficulty = newDifficulty;
+        this.gameState.MAX_LIVES = newLivesCount;
+        this.gameState.lives = newLivesCount;
         
-        if (newLivesCount !== this.gameState.MAX_LIVES) {
-            this.gameState.lives = newLivesCount;
-            localStorage.setItem('maxLives', newLivesCount.toString());
-            shouldUpdateDisplay = true;
-        }
-        
-        if (shouldUpdateDisplay) {
-            this.updateDisplay();
-        }
+        this.initializePhaseQuestions();
+        this.updateProgressBar();
+        this.updateDisplay();
+        this.generateQuestion();
+        this.updateBackground();
         
         document.getElementById('configModal').style.display = 'none';
+        this.pauseGame(this.gameState.PAUSE_TYPES.INITIAL);
     }
 
     updateDisplay() {
@@ -873,9 +1044,11 @@ class GameController {
         this.updateProgressBar();
         this.updateDisplay();
         this.generateQuestion();
+        this.updateBackground();
         this.gameState.setIsPaused(true);
         document.getElementById('game').classList.add('game-paused');
-        this.pauseGame(this.gameState.PAUSE_TYPES.INITIAL);
+        
+        this.showSavedGamesModal();
     }
 
     // Adicionar método adjustZoom
@@ -907,6 +1080,94 @@ class GameController {
             .join('');
         
         modal.style.display = 'block';
+    }
+
+    showSavedGamesModal() {
+        const modal = document.getElementById('savedGamesModal');
+        const listContainer = document.getElementById('savedGamesList');
+        const closeButton = document.getElementById('closeSavedGames');
+        const modalTitle = modal.querySelector('h2');
+        const savedGames = this.gameState.listAllSavedGames();
+        
+        // Mostrar/ocultar botão de fechar e ajustar título baseado no estado do jogo
+        if (!this.gameState.playerName) {
+            closeButton.style.display = 'none';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            modalTitle.innerHTML = '<i class="fas fa-play"></i> Bem-vindo ao Jogo da Tabuada!';
+            
+            // Adicionar mensagem de boas-vindas se não existir
+            if (!modal.querySelector('.pause-message')) {
+                modalTitle.insertAdjacentHTML(
+                    'afterend',
+                    '<p class="pause-message">Pratique suas habilidades de multiplicação!</p>'
+                );
+            }
+        } else {
+            closeButton.style.display = 'block';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            modalTitle.innerHTML = '<i class="fas fa-bars"></i> Menu do Jogo';
+            
+            // Remover mensagem de boas-vindas se existir
+            const welcomeMessage = modal.querySelector('.pause-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+        }
+        
+        if (savedGames.length === 0) {
+            listContainer.innerHTML = '<div class="no-saved-games">Nenhuma partida salva</div>';
+        } else {
+            listContainer.innerHTML = savedGames.map(game => `
+                <div class="saved-game-item" data-game-id="${game.id}">
+                    <div class="game-info-container">
+                        <div class="game-title">${game.playerName || 'Jogador sem nome'}</div>
+                        <div class="game-details">
+                            Fase: ${game.currentPhase} | Pontos: ${game.score} | 
+                            Última jogada: ${new Date(game.lastPlayedAt).toLocaleDateString()}
+                        </div>
+                    </div>
+                    <div class="game-actions">
+                        ${game.lives > 0 ? `
+                            <button class="game-action-btn load-game-btn no-margin-bottom" onclick="gameController.loadSavedGame('${game.id}')">
+                                <i class="fas fa-play"></i> Jogar
+                            </button>
+                        ` : `
+                            <span class="game-over-badge no-margin-bottom">
+                                <i class="fas fa-skull"></i> <small>Game Over</small>
+                            </span>
+                        `}
+                        <button class="game-action-btn delete-game-btn no-margin-bottom" onclick="gameController.deleteSavedGame('${game.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        modal.style.display = 'block';
+    }
+
+    loadSavedGame(gameId) {
+        if (this.gameState.loadGame(gameId)) {
+            this.updateDisplay();
+            this.updateProgressBar();
+            this.generateQuestion();
+            this.updateBackground();
+            document.getElementById('savedGamesModal').style.display = 'none';
+            this.pauseGame(this.gameState.PAUSE_TYPES.TIMER_CLICK);
+        } else {
+            alert('Erro ao carregar o jogo!');
+        }
+    }
+
+    deleteSavedGame(gameId) {
+        if (confirm('Tem certeza que deseja excluir esta partida?')) {
+            if (this.gameState.deleteGame(gameId)) {
+                this.showSavedGamesModal(); // Atualiza a lista
+            } else {
+                alert('Erro ao excluir a partida!');
+            }
+        }
     }
 }
 
