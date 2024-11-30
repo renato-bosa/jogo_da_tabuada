@@ -1,1001 +1,1302 @@
-let currentQuestion = {};
-let score = 0;
-let lives = 4;
-let timer = 30;
-let timerInterval;
-let attemptsHistory = [];
-const MAX_HISTORY = 5;
-const MAX_LIVES = 4;
-
-// Configurações de dificuldade
-const difficultySettings = {
-    easy: {
-        baseTime: 30,
-        levelTimeDecrease: 5
-    },
-    medium: {
-        baseTime: 15,
-        levelTimeDecrease: 3
-    },
-    hard: {
-        baseTime: 10,
-        levelTimeDecrease: 2
-    }
-};
-
-let currentDifficulty = 'easy';
-
-// Estrutura de dados para controlar o progresso das perguntas
-let questions = {};
-let currentPhase = 2; // Começa na tabuada do 2
-
-// Adicionar variáveis para estatísticas no início do arquivo
-let phaseStats = {
-    errors: 0,
-    corrects: 0,
-    totalTime: 0,
-    startTime: null
-};
-
-// Inicializa as perguntas para uma fase
-function initializePhaseQuestions(phase) {
-    console.log('Inicializando questões para fase:', phase);
-    questions = {};
-    // Resetar estatísticas
-    phaseStats = {
-        errors: 0,
-        corrects: 0,
-        totalTime: 0,
-        startTime: Date.now()
-    };
-    
-    for (let i = 1; i <= 10; i++) {
-        const key = `${phase}x${i}`;
-        questions[key] = {
-            num1: phase,
-            num2: i,
-            answer: phase * i,
-            masteryLevel: 0
+class GameState {
+    constructor() {
+        // Estado do jogo atual
+        this.currentGameId = null;
+        this.playerName = '';
+        this.createdAt = new Date();
+        this.lastPlayedAt = new Date();
+        this.isPaused = true;
+        this.currentPhase = 2;
+        this.highestPhase = 2;
+        this.currentQuestion = {};
+        this.score = 0;
+        this.lives = 5;
+        this.timer = 30;
+        this.timerInterval = null;
+        this.attemptsHistory = [];
+        
+        // Constantes
+        this.MAX_HISTORY = 5;
+        this.MAX_LIVES = 5;
+        this.MAX_HIGH_SCORES = 5;
+        
+        // Configurações
+        this.currentDifficulty = 'easy';
+        this.difficultySettings = {
+            easy: { baseTime: 30, levelTimeDecrease: 5 },
+            medium: { baseTime: 15, levelTimeDecrease: 3 },
+            hard: { baseTime: 10, levelTimeDecrease: 2 }
         };
-    }
-    console.log('Questões inicializadas:', questions);
-}
-
-// Seleciona a próxima pergunta baseada no mastery level
-function selectNextQuestion() {
-    console.log('Chamou selectNextQuestion');
-    console.log('Estado atual das questões:', questions);
-    
-    const questionsByMastery = {
-        0: [],
-        1: []
-    };
-
-    // Agrupa questões por mastery level
-    Object.keys(questions).forEach(key => {
-        const level = questions[key].masteryLevel;
-        if (level < 2) {
-            questionsByMastery[level].push(key);
-        }
-    });
-
-    console.log('Questões agrupadas por mastery:', questionsByMastery);
-
-    // Verifica se há questões disponíveis
-    const availableQuestions = [...questionsByMastery[0], ...questionsByMastery[1]];
-    console.log('Questões disponíveis:', availableQuestions);
-    
-    if (availableQuestions.length === 0) {
-        console.log('Nenhuma questão disponível');
-        // Verifica se todas as questões têm mastery level 2
-        if (checkPhaseCompletion()) {
-            console.log('Fase completada!');
-            return null;
-        }
-    }
-
-    // Seleciona primeiro do menor mastery level disponível
-    for (let level = 0; level <= 1; level++) {
-        if (questionsByMastery[level].length > 0) {
-            const randomIndex = Math.floor(Math.random() * questionsByMastery[level].length);
-            console.log(`Selecionou questão do nível ${level}:`, questionsByMastery[level][randomIndex]);
-            return questionsByMastery[level][randomIndex];
-        }
-    }
-
-    console.log('Fallback para primeira questão');
-    return Object.keys(questions)[0];
-}
-
-// Verifica se a fase foi completada
-function checkPhaseCompletion() {
-    return Object.values(questions).every(q => q.masteryLevel === 2);
-}
-
-// Atualiza a barra de progresso
-function updateProgressBar() {
-    document.querySelectorAll('.phase').forEach(phase => {
-        const phaseNumber = parseInt(phase.dataset.phase);
-        if (phaseNumber <= currentPhase) {
-            phase.classList.remove('locked');
-            if (phaseNumber === currentPhase) {
-                phase.innerHTML = `<i class="fas fa-calculator"></i><span>${phaseNumber}</span>`;
-            } else {
-                phase.innerHTML = `<i class="fas fa-check"></i><span>${phaseNumber}</span>`;
-            }
-        } else {
-            phase.classList.add('locked');
-            phase.innerHTML = `<i class="fas fa-lock"></i><span>${phaseNumber}</span>`;
-        }
-    });
-}
-
-// Adicionar função para ganhar vida
-function gainLife() {
-    if (lives < MAX_LIVES) {
-        lives++;
-        const heartsContainer = document.querySelector('.hearts-container');
-        const newHeart = document.createElement('i');
-        newHeart.className = 'fas fa-heart';
-        newHeart.style.opacity = '0';
-        heartsContainer.appendChild(newHeart);
         
-        // Animar o aparecimento do novo coração
-        setTimeout(() => {
-            newHeart.style.transition = 'opacity 0.5s, transform 0.5s';
-            newHeart.style.opacity = '1';
-            newHeart.style.transform = 'scale(1.2)';
-            setTimeout(() => {
-                newHeart.style.transform = 'scale(1)';
-            }, 500);
-        }, 100);
+        // Tipos de pausa
+        this.PAUSE_TYPES = {
+            INITIAL: 'initial',
+            TIMER_CLICK: 'timer_click',
+            NEXT_PHASE: 'next_phase',
+            WRONG_ANSWER: 'wrong_answer'
+        };
         
-        updateLives();
+        // Estrutura de dados para questões
+        this.questions = {};
+        
+        // Estatísticas da fase
+        this.phaseStats = {
+            errors: 0,
+            corrects: 0,
+            totalTime: 0,
+            startTime: null
+        };
+
+        // Armazenamento de todas as partidas
+        this.savedGames = {};
+
+        // Carregar jogos salvos ao inicializar
+        this.loadSavedGames();
+
+        // Adicionar controle de subfase
+        this.currentSubPhase = 'A'; // 'A' ou 'B'
     }
-}
 
-// Atualizar a função showNextPhaseModal
-function showNextPhaseModal() {
-    // Pausar o jogo quando mostrar o modal
-    isPaused = true;
-    clearInterval(timerInterval);
+    // Métodos para gerenciar o estado
+    getIsPaused() { return this.isPaused; }
+    setIsPaused(value) { this.isPaused = value; }
     
-    // Ganhar uma vida ao completar a fase
-    gainLife();
+    getCurrentPhase() { return this.currentPhase; }
+    setCurrentPhase(value) { this.currentPhase = value; }
     
-    const modal = document.getElementById('nextPhaseModal');
-    document.getElementById('currentPhase').textContent = currentPhase;
-    document.getElementById('nextPhase').textContent = currentPhase + 1;
+    getScore() { return this.score; }
+    setScore(value) { this.score = value; }
     
-    // Calcular tempo total em minutos e segundos
-    const totalTimeInSeconds = Math.floor((Date.now() - phaseStats.startTime) / 1000);
-    const minutes = Math.floor(totalTimeInSeconds / 60);
-    const seconds = totalTimeInSeconds % 60;
-    
-    // Calcular taxa de acerto
-    const totalAttempts = phaseStats.corrects + phaseStats.errors;
-    const successRate = ((phaseStats.corrects / totalAttempts) * 100).toFixed(1);
-    
-    // Adicionar mensagem sobre a vida extra
-    const lifeGainedMessage = lives < MAX_LIVES ? 
-        '<div class="bonus-life"><i class="fas fa-heart"></i> Vida extra conquistada!</div>' : '';
-    
-    // Atualizar o conteúdo do modal
-    const statsHtml = `
-        <div class="phase-stats">
-            <div class="stat-item">
-                <i class="fas fa-check-circle"></i>
-                <span>Acertos: ${phaseStats.corrects}</span>
-            </div>
-            <div class="stat-item">
-                <i class="fas fa-times-circle"></i>
-                <span>Erros: ${phaseStats.errors}</span>
-            </div>
-            <div class="stat-item">
-                <i class="fas fa-percentage"></i>
-                <span>Taxa de Acerto: ${successRate}%</span>
-            </div>
-            <div class="stat-item">
-                <i class="fas fa-clock"></i>
-                <span>Tempo Total: ${minutes}m ${seconds}s</span>
-            </div>
-        </div>
-        ${lifeGainedMessage}
-    `;
-    
-    // Inserir as estatísticas no modal
-    document.querySelector('.modal-content.celebration .phase-stats')?.remove();
-    document.querySelector('.modal-content.celebration p:first-of-type').insertAdjacentHTML('afterend', statsHtml);
-    
-    modal.style.display = 'block';
-}
+    getLives() { return this.lives; }
+    setLives(value) { this.lives = value; }
 
-function randomNumber(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-// Adicionar variável de controle de pausa
-let isPaused = true;
-
-// Definir tipos de pausa
-const PAUSE_TYPES = {
-    INITIAL: 'initial',
-    TIMER_CLICK: 'timer_click',
-    NEXT_PHASE: 'next_phase',
-    WRONG_ANSWER: 'wrong_answer'
-};
-
-// Atualizar função pauseGame para aceitar o tipo de pausa
-function pauseGame(pauseType = PAUSE_TYPES.TIMER_CLICK) {
-    isPaused = true;
-    clearInterval(timerInterval);
-    document.getElementById('game').classList.add('game-paused');
-    
-    const modal = document.getElementById('pauseModal');
-    const modalContent = modal.querySelector('.modal-content');
-    const modalTitle = modal.querySelector('h2');
-    const resumeButton = document.getElementById('resumeGame');
-    
-    // Remover mensagem anterior se existir
-    const existingMessage = modal.querySelector('.pause-message');
-    if (existingMessage) {
-        existingMessage.remove();
+    // Métodos para salvar/carregar estado
+    saveToLocalStorage() {
+        localStorage.setItem('currentPhase', this.currentPhase);
+        localStorage.setItem('highestPhase', this.highestPhase);
+        localStorage.setItem('score', this.score);
+        localStorage.setItem('lives', this.lives);
+        localStorage.setItem('difficulty', this.currentDifficulty);
+        localStorage.setItem('questions', JSON.stringify(this.questions));
     }
-    
-    switch(pauseType) {
-        case PAUSE_TYPES.INITIAL:
-            modalTitle.innerHTML = '<i class="fas fa-play"></i> Bem-vindo ao Jogo da Tabuada!';
-            resumeButton.innerHTML = '<i class="fas fa-play"></i> Iniciar Jogo';
-            // Inserir mensagem explicativa após o título
-            modalTitle.insertAdjacentHTML(
-                'afterend',
-                '<p class="pause-message">Pratique suas habilidades de multiplicação.<br />Pronto para começar?</p>'
-            );
-            break;
-            
-        case PAUSE_TYPES.NEXT_PHASE:
-            modalTitle.innerHTML = `<i class="fas fa-calculator"></i> Tabuada do ${currentPhase}`;
-            resumeButton.innerHTML = '<i class="fas fa-play"></i> Começar Nova Fase';
-            // Inserir mensagem motivacional após o título
-            modalTitle.insertAdjacentHTML(
-                'afterend',
-                '<p class="pause-message">Prepare-se para a próxima fase!</p>'
-            );
-            break;
-            
-        default: // PAUSE_TYPES.TIMER_CLICK
-            modalTitle.innerHTML = '<i class="fas fa-pause"></i> Jogo Pausado';
-            resumeButton.innerHTML = '<i class="fas fa-play"></i> Continuar Jogo';
+
+    loadFromLocalStorage() {
+        const savedPhase = localStorage.getItem('currentPhase');
+        if (savedPhase) this.currentPhase = parseInt(savedPhase);
+
+        const savedHighestPhase = localStorage.getItem('highestPhase');
+        if (savedHighestPhase) this.highestPhase = parseInt(savedHighestPhase);
+
+        const savedScore = localStorage.getItem('score');
+        if (savedScore) this.score = parseInt(savedScore);
+
+        const savedLives = localStorage.getItem('lives');
+        if (savedLives) this.lives = parseInt(savedLives);
+
+        const savedDifficulty = localStorage.getItem('difficulty');
+        if (savedDifficulty) this.currentDifficulty = savedDifficulty;
+
+        const savedQuestions = localStorage.getItem('questions');
+        if (savedQuestions) this.questions = JSON.parse(savedQuestions);
     }
-    
-    modal.style.display = 'block';
-}
 
-// Adicionar função para retomar o jogo
-function resumeGame() {
-    isPaused = false;
-    document.getElementById('game').classList.remove('game-paused');
-    document.getElementById('pauseModal').style.display = 'none';
-    startTimer();
-    document.getElementById('answer').focus();
-}
+    listAllSavedGames() {
+        return Object.values(this.savedGames)
+            .sort((a, b) => new Date(b.lastPlayedAt) - new Date(a.lastPlayedAt));
+    }
 
-// Atualizar a função startTimer para considerar o estado de pausa
-function startTimer() {
-    if (isPaused) return;
-    
-    clearInterval(timerInterval);
-    const diffSettings = difficultySettings[currentDifficulty];
-    timer = diffSettings.baseTime;
-    
-    updateTimerDisplay();
-    
-    timerInterval = setInterval(() => {
-        if (!isPaused) {
-            timer--;
-            updateTimerDisplay();
-            
-            if (timer <= 0) {
-                loseLife();
-                generateQuestion();
+    loadGame(gameId) {
+        const game = this.savedGames[gameId];
+        if (!game) return false;
+        
+        this.currentGameId = gameId;
+        this.playerName = game.playerName;
+        this.createdAt = new Date(game.createdAt);
+        this.lastPlayedAt = new Date(game.lastPlayedAt);
+        this.isPaused = true;
+        this.currentPhase = game.currentPhase;
+        this.currentSubPhase = game.currentSubPhase || 'A';
+        this.highestPhase = game.highestPhase;
+        this.score = game.score;
+        this.lives = game.lives;
+        this.currentDifficulty = game.currentDifficulty;
+        this.questions = { ...game.questions };
+        this.attemptsHistory = [];
+        
+        return true;
+    }
+
+    reset() {
+        // Resetar fase atual e mais alta
+        this.currentPhase = 2;
+        this.highestPhase = 2;
+        this.currentSubPhase = 'A';
+        
+        // Resetar outros valores
+        this.score = 0;
+        this.lives = this.MAX_LIVES;
+        this.attemptsHistory = [];
+        this.questions = {};
+        this.phaseStats = {
+            errors: 0,
+            corrects: 0,
+            totalTime: 0,
+            startTime: Date.now()
+        };
+        
+        // Limpar localStorage
+        localStorage.removeItem('currentPhase');
+        localStorage.removeItem('highestPhase');
+        localStorage.removeItem('score');
+        localStorage.removeItem('lives');
+        localStorage.removeItem('questions');
+    }
+
+    saveCurrentGame() {
+        if (!this.currentGameId) {
+            this.currentGameId = crypto.randomUUID();
+        }
+        
+        this.savedGames[this.currentGameId] = {
+            id: this.currentGameId,
+            playerName: this.playerName,
+            createdAt: this.createdAt,
+            lastPlayedAt: new Date(),
+            isPaused: true,
+            currentPhase: this.currentPhase,
+            currentSubPhase: this.currentSubPhase,
+            highestPhase: this.highestPhase,
+            score: this.score,
+            lives: this.lives,
+            currentDifficulty: this.currentDifficulty,
+            questions: { ...this.questions }
+        };
+        
+        localStorage.setItem('savedGames', JSON.stringify(this.savedGames));
+        return this.currentGameId;
+    }
+
+    deleteGame(gameId) {
+        if (this.savedGames[gameId]) {
+            delete this.savedGames[gameId];
+            localStorage.setItem('savedGames', JSON.stringify(this.savedGames));
+            return true;
+        }
+        return false;
+    }
+
+    loadSavedGames() {
+        const savedGames = localStorage.getItem('savedGames');
+        if (savedGames) {
+            this.savedGames = JSON.parse(savedGames);
+        }
+    }
+
+    createNewGame(playerName) {
+        this.reset();
+        this.currentGameId = crypto.randomUUID();
+        this.playerName = playerName;
+        this.createdAt = new Date();
+        this.lastPlayedAt = new Date();
+        this.currentSubPhase = 'A';
+    }
+
+    initializePhaseQuestions() {
+        console.log('Inicializando questões para fase:', this.currentPhase, this.currentSubPhase);
+        this.questions = {};
+        this.phaseStats = {
+            errors: 0,
+            corrects: 0,
+            totalTime: 0,
+            startTime: Date.now()
+        };
+        
+        // Definir range baseado na subfase
+        const startNum = this.currentSubPhase === 'A' ? 1 : 6;
+        const endNum = this.currentSubPhase === 'A' ? 5 : 10;
+        
+        for (let i = startNum; i <= endNum; i++) {
+            const key = `${this.currentPhase}x${i}`;
+            this.questions[key] = {
+                num1: this.currentPhase,
+                num2: i,
+                answer: this.currentPhase * i,
+                masteryLevel: 0
+            };
+        }
+    }
+
+    // Adicionar método para verificar progresso da fase
+    getPhaseProgress(phase) {
+        console.log('=== Verificando Progresso da Fase ===', {
+            faseVerificada: phase,
+            faseAtual: this.currentPhase,
+            subfaseAtual: this.currentSubPhase
+        });
+
+        // Se for a fase atual
+        if (phase === this.currentPhase) {
+            const isComplete = this.isSubPhaseComplete();
+            console.log('Verificando fase atual:', {
+                subfaseCompleta: isComplete,
+                subfaseAtual: this.currentSubPhase
+            });
+
+            if (this.currentSubPhase === 'A') {
+                return isComplete ? 'half' : 'started';
+            } else { // subfase B
+                return isComplete ? 'complete' : 'half';
             }
         }
-    }, 1000);
-}
 
-function updateTimerDisplay() {
-    document.getElementById('timer').textContent = timer;
-    if (timer <= 5) {
-        document.getElementById('timer').style.color = '#ff4757';
-    } else {
-        document.getElementById('timer').style.color = '#2ed573';
+        // Para fases anteriores à atual
+        if (phase < this.currentPhase) {
+            console.log('Fase anterior à atual - marcando como completa');
+            return 'complete';
+        }
+
+        // Para fases posteriores à atual
+        if (phase > this.currentPhase) {
+            console.log('Fase posterior à atual - marcando como none');
+            return 'none';
+        }
+
+        // Caso padrão (não deveria chegar aqui)
+        console.log('Caso não previsto - retornando started');
+        return 'started';
+    }
+
+    isSubPhaseComplete(questions = null) {
+        const questionsToCheck = questions || this.questions;
+        const complete = Object.values(questionsToCheck).every(q => q.masteryLevel === 2);
+        
+        console.log('Verificando conclusão da subfase:', {
+            questoes: questionsToCheck,
+            completa: complete
+        });
+        
+        return complete;
     }
 }
 
-// Modifica a funço generateQuestion
-function generateQuestion() {
-    const questionKey = selectNextQuestion();
-    
-    if (questionKey === null && checkPhaseCompletion()) {
-        // Só mostra o modal se realmente completou a fase
-        if (currentPhase < 9) {
-            showNextPhaseModal();
+class GameController {
+    constructor() {
+        this.gameState = new GameState();
+        this.backgroundImages = {
+            2: 'img/fase-2-landscape.webp',
+            3: 'img/fase-3-landscape.webp',
+            4: 'img/fase-4-landscape.webp',
+            5: 'img/fase-5-landscape.webp',
+            6: 'img/fase-6-landscape.webp',
+            7: 'img/fase-7-landscape.webp',
+            8: 'img/fase-8-landscape.webp',
+            9: 'img/fase-9-landscape.webp'
+        };
+        this.initializeEventListeners();
+    }
+
+    // Adicionar novo método para atualizar o background
+    updateBackground() {
+        if (!this.gameState.playerName) {
+            document.body.style.background = 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)';
             return;
         }
-        // Jogo completado
-        alert('Parabéns! Você completou todas as tabuadas!');
+
+        const currentPhase = this.gameState.getCurrentPhase();
+        const backgroundImage = this.backgroundImages[currentPhase];
+        
+        if (backgroundImage) {
+            document.body.style.background = `url('${backgroundImage}') no-repeat center center fixed`;
+            document.body.style.backgroundSize = 'cover';
+        }
+    }
+
+    initializeEventListeners() {
+        // Input de resposta
+        document.getElementById('answer').addEventListener('keypress', (e) => {
+            console.log('Tecla pressionada:', e.key);
+            console.log('Estado pausado:', this.gameState.getIsPaused());
+            
+            if (e.key === 'Enter' && !this.gameState.getIsPaused()) {
+                console.log('Enter pressionado e jogo não pausado');
+                e.preventDefault(); // Prevenir comportamento padrão do Enter
+                this.checkAnswer();
+            }
+        });
+
+        // Botão de verificar
+        document.querySelector('.check-btn').addEventListener('click', (e) => {
+            if (!this.gameState.getIsPaused()) {
+                e.preventDefault(); // Prevenir comportamento padrão do clique
+                this.checkAnswer();
+            }
+        });
+
+        // Timer click
+        document.getElementById('timer').addEventListener('click', () => {
+            this.pauseGame(this.gameState.PAUSE_TYPES.TIMER_CLICK);
+        });
+
+        // Botão de retomar
+        document.getElementById('resumeGame').addEventListener('click', () => {
+            this.resumeGame();
+        });
+
+        // Novos event listeners
+        // Botão de fechar modal de configurações
+        document.getElementById('closeModal').addEventListener('click', () => {
+            document.getElementById('configModal').style.display = 'none';
+            if (this.gameState.playerName) {
+                this.pauseGame(this.gameState.PAUSE_TYPES.TIMER_CLICK);
+            }
+        });
+
+        // Botão de fechar modal de ranking
+        document.getElementById('closeHighScores').addEventListener('click', () => {
+            document.getElementById('highScoresModal').style.display = 'none';
+        });
+
+        // Botões de mostrar ranking (desktop e mobile)
+        document.getElementById('showHighScores').addEventListener('click', () => {
+            this.showHighScoresModal();
+        });
+        document.getElementById('showHighScoresMobile').addEventListener('click', () => {
+            this.showHighScoresModal();
+        });
+
+        // Botão de resetar ranking
+        document.getElementById('resetHighScores').addEventListener('click', () => {
+            this.resetHighScores();
+        });
+
+        // Botão de continuar após resposta errada
+        document.getElementById('continueAfterWrong').addEventListener('click', () => {
+            this.continueAfterWrong();
+        });
+
+        // Botão de reiniciar jogo
+        document.getElementById('newGameBtn').addEventListener('click', () => {
+            document.getElementById('savedGamesModal').style.display = 'none';
+            this.openConfigModal();
+        });
+
+        // Salvar configurações quando mudar dificuldade
+        document.getElementById('difficulty').addEventListener('change', (e) => {
+            localStorage.setItem('gameDifficulty', e.target.value);
+        });
+
+        // Clique fora dos modais
+        window.addEventListener('click', (e) => {
+            const configModal = document.getElementById('configModal');
+            const highScoresModal = document.getElementById('highScoresModal');
+            const savedGamesModal = document.getElementById('savedGamesModal');
+            
+            if (e.target === configModal && this.gameState.playerName) {
+                configModal.style.display = 'none';
+                this.pauseGame(this.gameState.PAUSE_TYPES.TIMER_CLICK);
+            }
+            if (e.target === highScoresModal) {
+                highScoresModal.style.display = 'none';
+            }
+            if (e.target === savedGamesModal && this.gameState.playerName) {
+                savedGamesModal.style.display = 'none';
+                this.pauseGame(this.gameState.PAUSE_TYPES.TIMER_CLICK);
+            }
+        });
+
+        // Ajuste de zoom
+        window.addEventListener('load', this.adjustZoom);
+        window.addEventListener('resize', this.adjustZoom);
+
+        // Perda de foco da janela
+        window.addEventListener('blur', () => {
+            if (!this.gameState.getIsPaused()) {
+                this.pauseGame();
+            }
+        });
+
+        // Inicializar outros listeners
+        this.initializeConfigListeners();
+        this.initializeGameOverListeners();
+        this.initializePhaseListeners();
+
+        // Botão de mostrar jogos salvos
+        document.getElementById('showSavedGames').addEventListener('click', () => {
+            this.showSavedGamesModal();
+        });
+
+        // Botão de fechar modal de jogos salvos
+        document.getElementById('closeSavedGames').addEventListener('click', () => {
+            document.getElementById('savedGamesModal').style.display = 'none';
+            if (this.gameState.playerName) {
+                this.pauseGame(this.gameState.PAUSE_TYPES.TIMER_CLICK);
+            }
+        });
+    }
+
+    initializeConfigListeners() {
+        // Configurações
+        document.getElementById('configBtn').addEventListener('click', () => {
+            this.openConfigModal();
+        });
+
+        document.getElementById('saveConfig').addEventListener('click', () => {
+            this.saveConfig();
+        });
+
+        // Adicionar listener para o botão de opções avançadas
+        document.getElementById('toggleAdvanced').addEventListener('click', (e) => {
+            const advancedOptions = document.getElementById('advancedOptions');
+            const button = e.currentTarget;
+            
+            advancedOptions.classList.toggle('show');
+            button.classList.toggle('active');
+        });
+
+        // Adicionar listener para o botão de voltar ao menu
+        document.getElementById('backToMenu').addEventListener('click', () => {
+            document.getElementById('configModal').style.display = 'none';
+            if (this.gameState.playerName) {
+                this.showSavedGamesModal();
+            } else {
+                this.showSavedGamesModal();
+            }
+        });
+    }
+
+    checkAnswer() {
+        console.log('=== Verificando Resposta ===');
+        console.log('Estado atual:', {
+            fase: this.gameState.currentPhase,
+            subfase: this.gameState.currentSubPhase,
+            questões: this.gameState.questions
+        });
+
+        if (this.gameState.getIsPaused()) {
+            console.log('Jogo pausado, ignorando resposta');
+            return;
+        }
+        
+        const userAnswer = parseInt(document.getElementById('answer').value);
+        const correctAnswer = this.gameState.currentQuestion.answer;
+        console.log('Resposta:', { usuário: userAnswer, correta: correctAnswer });
+        
+        if (isNaN(userAnswer)) return;
+        
+        if (userAnswer === correctAnswer) {
+            this.handleCorrectAnswer();
+        } else {
+            this.handleWrongAnswer();
+            return;
+        }
+        
+        this.saveProgress();
+        this.updateDisplay();
+        this.generateQuestion();
+    }
+
+    handleCorrectAnswer() {
+        console.log('=== Resposta Correta ===');
+        this.playSound('correctSound');
+        this.gameState.score += 10;
+        this.gameState.phaseStats.corrects++;
+        
+        const key = `${this.gameState.currentQuestion.num1}x${this.gameState.currentQuestion.num2}`;
+        if (this.gameState.questions[key].masteryLevel < 2) {
+            this.gameState.questions[key].masteryLevel++;
+        }
+        
+        console.log('Novo estado das questões:', this.gameState.questions);
+        
+        this.updateHistory(true);
+        this.animateScoreElement();
+        
+        if (this.gameState.isSubPhaseComplete()) {
+            console.log('Subfase completada!');
+            this.showNextPhaseModal();
+        }
+        
+        this.gameState.saveCurrentGame();
+    }
+
+    handleWrongAnswer() {
+        console.log('Iniciando handleWrongAnswer');
+        this.playSound('wrongSound');
+        this.gameState.phaseStats.errors++;
+        
+        const key = `${this.gameState.currentQuestion.num1}x${this.gameState.currentQuestion.num2}`;
+        this.gameState.questions[key].masteryLevel = 0;
+        
+        console.log('Pausando o jogo');
+        this.gameState.setIsPaused(true);
+        document.getElementById('game').classList.add('game-paused');
+        
+        console.log('Mostrando modal de resposta errada');
+        this.showWrongAnswerModal();
+        this.loseLife();
+        this.updateHistory(false);
+        
+        // Salvar após resposta errada
+        this.gameState.saveCurrentGame();
+        
+        console.log('handleWrongAnswer finalizado');
+    }
+
+    generateQuestion() {
+        console.log('=== Gerando Nova Questão ===');
+        console.log('Estado atual:', {
+            fase: this.gameState.currentPhase,
+            subfase: this.gameState.currentSubPhase,
+            questões: this.gameState.questions
+        });
+
+        const questionKey = this.selectNextQuestion();
+        
+        if (questionKey === null && this.gameState.isSubPhaseComplete()) {
+            console.log('Todas as questões desta subfase foram completadas');
+            this.showNextPhaseModal();
+            return;
+        }
+
+        if (questionKey) {
+            this.gameState.currentQuestion = this.gameState.questions[questionKey];
+            console.log('Questão selecionada:', this.gameState.currentQuestion);
+            
+            document.getElementById('question').textContent = 
+                `${this.gameState.currentQuestion.num1} × ${this.gameState.currentQuestion.num2} = ?`;
+            document.getElementById('answer').value = '';
+            
+            if (!this.gameState.getIsPaused()) {
+                document.getElementById('answer').focus();
+                this.startTimer();
+            }
+        }
+    }
+
+    selectNextQuestion() {
+        console.log('=== Selecionando Próxima Questão ===');
+        const questionsByMastery = {
+            0: [],
+            1: []
+        };
+
+        Object.entries(this.gameState.questions).forEach(([key, question]) => {
+            const level = question.masteryLevel;
+            if (level < 2) {
+                questionsByMastery[level].push(key);
+            }
+        });
+
+        console.log('Questões por nível de domínio:', questionsByMastery);
+
+        const availableQuestions = [...questionsByMastery[0], ...questionsByMastery[1]];
+        
+        if (availableQuestions.length === 0) {
+            console.log('Não há mais questões disponíveis');
+            return null;
+        }
+
+        for (let level = 0; level <= 1; level++) {
+            if (questionsByMastery[level].length > 0) {
+                const randomIndex = Math.floor(Math.random() * questionsByMastery[level].length);
+                const selectedKey = questionsByMastery[level][randomIndex];
+                console.log('Questão selecionada:', selectedKey);
+                return selectedKey;
+            }
+        }
+
+        return null;
+    }
+
+    checkPhaseCompletion() {
+        return Object.values(this.gameState.questions)
+            .every(q => q.masteryLevel === 2);
+    }
+
+    startTimer() {
+        if (this.gameState.getIsPaused()) return;
+        
+        clearInterval(this.gameState.timerInterval);
+        const diffSettings = this.gameState.difficultySettings[this.gameState.currentDifficulty];
+        this.gameState.timer = diffSettings.baseTime;
+        
+        this.updateTimerDisplay();
+        
+        this.gameState.timerInterval = setInterval(() => {
+            if (!this.gameState.getIsPaused()) {
+                this.gameState.timer--;
+                this.updateTimerDisplay();
+                
+                if (this.gameState.timer <= 0) {
+                    this.loseLife();
+                    this.generateQuestion();
+                }
+            }
+        }, 1000);
+    }
+
+    updateTimerDisplay() {
+        const timerElement = document.getElementById('timer');
+        timerElement.textContent = this.gameState.timer;
+        timerElement.style.color = this.gameState.timer <= 5 ? '#ff4757' : '#2ed573';
+    }
+
+    playSound(soundId) {
+        const sound = document.getElementById(soundId);
+        sound.currentTime = 0;
+        sound.play();
+    }
+
+    pauseGame(pauseType = this.gameState.PAUSE_TYPES.TIMER_CLICK) {
+        this.gameState.setIsPaused(true);
+        clearInterval(this.gameState.timerInterval);
+        document.getElementById('game').classList.add('game-paused');
+        
+        const modal = document.getElementById('pauseModal');
+        const modalTitle = modal.querySelector('h2');
+        const resumeButton = document.getElementById('resumeGame');
+        
+        // Remover mensagem anterior se existir
+        const existingMessage = modal.querySelector('.pause-message');
+        if (existingMessage) {
+            existingMessage.remove();
+        }
+        
+        switch(pauseType) {
+            case this.gameState.PAUSE_TYPES.INITIAL:
+                /* modalTitle.innerHTML = '<i class="fas fa-play"></i> Bem-vindo ao Jogo da Tabuada!';*/
+                modalTitle.innerHTML = '<i class="fas fa-play"></i> Pronto para começar?';
+                resumeButton.innerHTML = '<i class="fas fa-play"></i> Iniciar Jogo';
+                /*
+                modalTitle.insertAdjacentHTML(
+                    'afterend',
+                    '<p class="pause-message">Pratique suas habilidades de multiplicação.<br />Pronto para começar?</p>'
+                );
+                */
+                break;
+                
+            case this.gameState.PAUSE_TYPES.NEXT_PHASE:
+                modalTitle.innerHTML = `<i class="fas fa-calculator"></i> Tabuada do ${this.gameState.currentPhase}`;
+                resumeButton.innerHTML = '<i class="fas fa-play"></i> Começar Nova Fase';
+                modalTitle.insertAdjacentHTML(
+                    'afterend',
+                    '<p class="pause-message">Prepare-se para a próxima fase!</p>'
+                );
+                break;
+                
+            default:
+                modalTitle.innerHTML = '<i class="fas fa-pause"></i> Jogo Pausado';
+                resumeButton.innerHTML = '<i class="fas fa-play"></i> Continuar Jogo';
+        }
+        
+        modal.style.display = 'block';
+    }
+
+    resumeGame() {
+        this.gameState.setIsPaused(false);
+        document.getElementById('game').classList.remove('game-paused');
+        document.getElementById('pauseModal').style.display = 'none';
+        this.startTimer();
+        document.getElementById('answer').focus();
+    }
+
+    loseLife() {
+        const hearts = document.querySelectorAll('.hearts-container .fa-heart');
+        const livesElement = document.getElementById('lives');
+        
+        if (this.gameState.lives > 0) {
+            hearts[this.gameState.lives - 1].classList.add('heart-lost');
+            livesElement.classList.remove('lives-highlight');
+            void livesElement.offsetWidth;
+            livesElement.classList.add('lives-highlight');
+            
+            setTimeout(() => {
+                this.gameState.lives--;
+                this.updateLives();
+                
+                // Salvar após perder vida
+                this.gameState.saveCurrentGame();
+                
+                if (this.gameState.lives <= 0) {
+                    this.gameOver();
+                }
+            }, 500);
+        }
+    }
+
+    updateLives() {
+        const heartsContainer = document.querySelector('.hearts-container');
+        heartsContainer.innerHTML = '';
+        
+        for (let i = 0; i < this.gameState.MAX_LIVES; i++) {
+            const heart = document.createElement('i');
+            heart.className = 'fas fa-heart';
+            if (i >= this.gameState.lives) {
+                heart.style.opacity = '0.3';
+            }
+            heartsContainer.appendChild(heart);
+        }
+    }
+
+    gainLife() {
+        if (this.gameState.lives < this.gameState.MAX_LIVES) {
+            this.gameState.lives++;
+            const heartsContainer = document.querySelector('.hearts-container');
+            const newHeart = document.createElement('i');
+            newHeart.className = 'fas fa-heart';
+            newHeart.style.opacity = '0';
+            heartsContainer.appendChild(newHeart);
+            
+            setTimeout(() => {
+                newHeart.style.transition = 'opacity 0.5s, transform 0.5s';
+                newHeart.style.opacity = '1';
+                newHeart.style.transform = 'scale(1.2)';
+                setTimeout(() => {
+                    newHeart.style.transform = 'scale(1)';
+                }, 500);
+            }, 100);
+            
+            this.updateLives();
+            
+            // Salvar após ganhar vida
+            this.gameState.saveCurrentGame();
+        }
+    }
+
+    showNextPhaseModal() {
+        console.log('=== Mostrando Modal de Próxima Fase ===');
+        console.log('Estado atual antes da mudança:', {
+            fase: this.gameState.currentPhase,
+            subfase: this.gameState.currentSubPhase,
+            questõesCompletadas: this.gameState.isSubPhaseComplete()
+        });
+
+        this.gameState.setIsPaused(true);
+        clearInterval(this.gameState.timerInterval);
+        
+        // Primeiro determinar a mensagem correta
+        const currentPhaseText = `${this.gameState.currentPhase}${this.gameState.currentSubPhase}`;
+        let nextPhaseText;
+        
+        if (this.gameState.currentSubPhase === 'A') {
+            // Se estamos na subfase A, próxima é B da mesma fase
+            nextPhaseText = `${this.gameState.currentPhase}B`;
+        } else {
+            // Se estamos na subfase B, próxima é A da próxima fase
+            nextPhaseText = `${this.gameState.currentPhase + 1}A`;
+        }
+
+        // Atualizar o modal com as mensagens corretas
+        const modal = document.getElementById('nextPhaseModal');
+        document.getElementById('currentPhase').textContent = currentPhaseText;
+        document.getElementById('nextPhase').textContent = nextPhaseText;
+
+        // Depois atualizar o estado do jogo
+        if (this.gameState.currentSubPhase === 'A') {
+            console.log('Avançando para subfase B');
+            this.gameState.currentSubPhase = 'B';
+            this.gameState.initializePhaseQuestions();
+        } else {
+            console.log('Completou fase inteira, avançando para próxima fase');
+            this.gameState.currentPhase++;
+            this.gameState.currentSubPhase = 'A'; // Importante: começar pela subfase A
+            if (this.gameState.currentPhase > this.gameState.highestPhase) {
+                this.gameState.highestPhase = this.gameState.currentPhase;
+            }
+            this.gameState.initializePhaseQuestions();
+        }
+
+        console.log('Novo estado após mudança:', {
+            fase: this.gameState.currentPhase,
+            subfase: this.gameState.currentSubPhase,
+            proximaFase: nextPhaseText
+        });
+
+        this.updateProgressBar();
+        modal.style.display = 'block';
+        
+        this.gameState.saveCurrentGame();
+    }
+
+    initializeGameOverListeners() {
+        document.getElementById('restartGame').addEventListener('click', () => {
+            document.getElementById('gameOverModal').style.display = 'none';
+            this.openConfigModal(); // Abrir modal de nova partida
+        });
+    }
+
+    initializePhaseListeners() {
+        document.getElementById('startNextPhase').addEventListener('click', () => {
+            document.getElementById('nextPhaseModal').style.display = 'none';
+            
+            // Não incrementar a fase aqui, pois já foi feito no showNextPhaseModal
+            localStorage.setItem('currentPhase', this.gameState.currentPhase);
+            localStorage.setItem('highestPhase', this.gameState.highestPhase);
+            
+            this.gameState.setIsPaused(true);
+            document.getElementById('game').classList.add('game-paused');
+            this.updateBackground();
+            this.pauseGame(this.gameState.PAUSE_TYPES.NEXT_PHASE);
+            
+            this.generateQuestion();
+        });
+
+        document.querySelectorAll('.phase').forEach(phase => {
+            phase.addEventListener('click', () => {
+                const phaseNumber = parseInt(phase.dataset.phase);
+                this.changePhase(phaseNumber);
+            });
+        });
+    }
+
+    changePhase(newPhase) {
+        if (newPhase >= 2 && newPhase <= this.gameState.highestPhase) {
+            this.gameState.currentPhase = newPhase;
+            localStorage.setItem('currentPhase', this.gameState.currentPhase);
+            this.gameState.initializePhaseQuestions();
+            this.updateProgressBar();
+            this.generateQuestion();
+            this.updateBackground();
+        }
+    }
+
+    updateHistory(isCorrect) {
+        if (typeof isCorrect === 'boolean') {
+            this.gameState.attemptsHistory.push(isCorrect);
+            if (this.gameState.attemptsHistory.length > this.gameState.MAX_HISTORY) {
+                this.gameState.attemptsHistory = this.gameState.attemptsHistory.slice(-this.gameState.MAX_HISTORY);
+            }
+        }
+        
+        const historyContainer = document.getElementById('attempts-history');
+        if (historyContainer) {
+            historyContainer.innerHTML = '';
+            this.gameState.attemptsHistory.forEach((attempt, index) => {
+                const icon = document.createElement('i');
+                icon.className = `fas ${attempt ? 'fa-check-circle' : 'fa-times-circle'} attempt-icon ${attempt ? 'correct' : 'wrong'}`;
+                if (index === this.gameState.attemptsHistory.length - 1) {
+                    icon.classList.add('new');
+                }
+                historyContainer.appendChild(icon);
+            });
+        }
+    }
+
+    gameOver() {
+        const modal = document.getElementById('gameOverModal');
+        document.querySelector('.player-name-display').textContent = this.gameState.playerName;
+        document.getElementById('finalScore').textContent = this.gameState.score;
+        
+        // Adicionar a pontuação ao ranking automaticamente
+        this.addHighScore(this.gameState.playerName, this.gameState.score);
+        this.updateHighScoresDisplay();
+        
+        modal.style.display = 'block';
+    }
+
+    loadHighScores() {
+        // Obter todas as partidas salvas e ordená-las por pontuação
+        const savedGames = this.gameState.listAllSavedGames();
+        const uniqueScores = new Map();
+
+        // Para cada jogador, manter apenas a maior pontuação
+        savedGames.forEach(game => {
+            const existingScore = uniqueScores.get(game.playerName);
+            if (!existingScore || game.score > existingScore.score) {
+                uniqueScores.set(game.playerName, {
+                    name: game.playerName,
+                    score: game.score,
+                    date: game.lastPlayedAt
+                });
+            }
+        });
+
+        // Converter o Map para array e ordenar por pontuação
+        return Array.from(uniqueScores.values())
+            .sort((a, b) => b.score - a.score)
+            .slice(0, this.gameState.MAX_HIGH_SCORES);
+    }
+
+    saveHighScores(scores) {
+        // Este método não é mais necessário pois os scores são derivados das partidas salvas
+        // Mantido para compatibilidade, mas não faz nada
         return;
     }
 
-    currentQuestion = questions[questionKey];
-    document.getElementById('question').textContent = `${currentQuestion.num1} × ${currentQuestion.num2} = ?`;
-    document.getElementById('answer').value = '';
-    
-    if (!isPaused) {
-        document.getElementById('answer').focus();
-        startTimer();
+    addHighScore(name, scoreValue) {
+        // Não precisamos mais salvar explicitamente no ranking
+        // Apenas retornamos a posição atual no ranking
+        const highScores = this.loadHighScores();
+        return highScores.findIndex(s => s.name === name && s.score === scoreValue) + 1;
     }
-}
 
-function loseLife() {
-    const hearts = document.querySelectorAll('.hearts-container .fa-heart');
-    const livesElement = document.getElementById('lives');
-    
-    if (lives > 0) {
-        // Adiciona animação ao coração que será perdido
-        hearts[lives - 1].classList.add('heart-lost');
+    updateHighScoresDisplay(newScore = null) {
+        const highScoresList = document.getElementById('highScoresList');
+        const scores = this.loadHighScores();
         
-        // Adiciona animação de destaque vermelho
-        livesElement.classList.remove('lives-highlight');
-        void livesElement.offsetWidth; // Força um reflow para reiniciar a animação
-        livesElement.classList.add('lives-highlight');
-        
-        // Espera a animação terminar antes de atualizar as vidas
-        setTimeout(() => {
-            lives--;
-            updateLives();
-            
-            if (lives <= 0) {
-                gameOver();
-            }
-        }, 500);
-    }
-}
-
-function updateLives() {
-    const heartsContainer = document.querySelector('.hearts-container');
-    heartsContainer.innerHTML = '';
-    
-    for (let i = 0; i < MAX_LIVES; i++) {
-        const heart = document.createElement('i');
-        heart.className = 'fas fa-heart';
-        if (i >= lives) {
-            heart.style.opacity = '0.3';
+        if (highScoresList) {
+            highScoresList.innerHTML = scores
+                .map((score, index) => {
+                    // Verifica se este score é do jogo atual
+                    const isCurrentGame = this.gameState.currentGameId && 
+                        score.name === this.gameState.playerName && 
+                        score.score === this.gameState.score;
+                    
+                    return `
+                        <div class="score-item ${isCurrentGame ? 'pulse-animation' : ''} ${newScore && score.score === newScore.score && score.name === newScore.name ? 'highlight' : ''}">
+                            <span class="score-rank">#${index + 1}</span>
+                            <span class="score-name">${score.name}</span>
+                            <span class="score-value">${score.score}</span>
+                        </div>
+                    `;
+                })
+                .join('');
         }
-        heartsContainer.appendChild(heart);
     }
-}
 
-// Adicionar constantes para o sistema de high scores
-const MAX_HIGH_SCORES = 5;
+    showWrongAnswerModal() {
+        console.log('Iniciando showWrongAnswerModal');
+        const modal = document.getElementById('wrongAnswerModal');
+        const question = `${this.gameState.currentQuestion.num1} × ${this.gameState.currentQuestion.num2}`;
+        const answer = this.gameState.currentQuestion.answer;
+        
+        console.log('Questão:', question);
+        console.log('Resposta:', answer);
+        
+        modal.querySelector('.question-display').textContent = question;
+        modal.querySelector('.correct-answer').textContent = answer;
+        modal.style.display = 'block';
+        
+        document.getElementById('continueAfterWrong').focus();
+        console.log('Modal exibido');
 
-// Função para carregar high scores
-function loadHighScores() {
-    const scores = JSON.parse(localStorage.getItem('highScores')) || [];
-    return scores;
-}
+        // Verificar se o jogo está realmente pausado
+        if (!this.gameState.getIsPaused()) {
+            console.log('Estado inconsistente detectado: jogo não está pausado ao mostrar modal de erro');
+            this.gameState.setIsPaused(true);
+            document.getElementById('game').classList.add('game-paused');
+        } else {
+            console.log('Estado consistente: jogo está pausado ao mostrar modal de erro');
+        }
+    }
 
-// Função para salvar high scores
-function saveHighScores(scores) {
-    localStorage.setItem('highScores', JSON.stringify(scores));
-}
+    continueAfterWrong() {
+        document.getElementById('wrongAnswerModal').style.display = 'none';
+        this.gameState.setIsPaused(false);
+        document.getElementById('game').classList.remove('game-paused');
+        
+        this.saveProgress();
+        this.updateDisplay();
+        this.generateQuestion();
+    }
 
-// Função para atualizar a exibição dos high scores
-function updateHighScoresDisplay(newScore = null) {
-    console.log('Atualizando exibição dos high scores');
-    const highScoresList = document.getElementById('highScoresList');
-    console.log('Elemento highScoresList existe:', !!highScoresList);
-    
-    const scores = loadHighScores();
-    console.log('Scores carregados:', scores);
-    
-    if (highScoresList) {
+    saveProgress() {
+        localStorage.setItem('questions', JSON.stringify(this.gameState.questions));
+    }
+
+    loadProgress() {
+        const savedQuestions = localStorage.getItem('questions');
+        if (savedQuestions) {
+            const loadedQuestions = JSON.parse(savedQuestions);
+            const firstQuestion = Object.keys(loadedQuestions)[0];
+            const savedPhaseNumber = parseInt(firstQuestion.split('x')[0]);
+            
+            if (savedPhaseNumber === this.gameState.currentPhase) {
+                this.gameState.questions = loadedQuestions;
+            } else {
+                this.initializePhaseQuestions();
+            }
+        }
+    }
+
+    resetProgress() {
+        const highScores = this.loadHighScores();
+        localStorage.clear();
+        this.saveHighScores(highScores);
+        
+        this.gameState.reset();
+        this.initializePhaseQuestions();
+        this.updateProgressBar();
+        this.updateDisplay();
+        this.generateQuestion();
+    }
+
+    resetHighScores() {
+        if (confirm('Tem certeza que deseja limpar o ranking? Esta ação irá apagar todas as partidas salvas.')) {
+            // Limpar todas as partidas salvas
+            Object.keys(this.gameState.savedGames).forEach(gameId => {
+                this.gameState.deleteGame(gameId);
+            });
+            this.updateHighScoresDisplay();
+            alert('Ranking e partidas salvas foram limpos com sucesso!');
+        }
+    }
+
+    openConfigModal() {
+        // Pausar o jogo atual se houver um jogador
+        if (this.gameState.playerName) {
+            this.gameState.setIsPaused(true);
+            document.getElementById('game').classList.add('game-paused');
+        }
+
+        const modal = document.getElementById('configModal');
+        const closeButton = document.getElementById('closeModal');
+        const backButton = document.getElementById('backToMenu');
+        
+        document.getElementById('newGamePlayerName').value = '';
+        document.getElementById('difficulty').value = 'easy';
+        document.getElementById('lives-count').value = '4';
+        
+        // Mostrar/ocultar botões baseado no estado do jogo
+        if (!this.gameState.playerName) {
+            closeButton.style.display = 'none';
+            backButton.style.display = 'block';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        } else {
+            closeButton.style.display = 'block';
+            backButton.style.display = 'none';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        }
+        
+        // Resetar estado das opções avançadas
+        const advancedOptions = document.getElementById('advancedOptions');
+        const toggleButton = document.getElementById('toggleAdvanced');
+        advancedOptions.classList.remove('show');
+        toggleButton.classList.remove('active');
+        
+        modal.style.display = 'block';
+        document.getElementById('newGamePlayerName').focus();
+    }
+
+    saveConfig() {
+        const playerName = document.getElementById('newGamePlayerName').value.trim();
+        if (!playerName) {
+            const input = document.getElementById('newGamePlayerName');
+            input.style.borderColor = '#ff4757';
+            input.placeholder = 'Digite seu nome primeiro!';
+            setTimeout(() => {
+                input.style.borderColor = '#3498db';
+                input.placeholder = 'Digite seu nome';
+            }, 2000);
+            return;
+        }
+
+        const newDifficulty = document.getElementById('difficulty').value;
+        const livesSelect = document.getElementById('lives-count');
+        const newLivesCount = livesSelect.parentElement.style.display === 'none' ? 5 : parseInt(livesSelect.value);
+        
+        this.gameState.createNewGame(playerName);
+        this.gameState.currentDifficulty = newDifficulty;
+        this.gameState.MAX_LIVES = newLivesCount;
+        this.gameState.lives = newLivesCount;
+        
+        this.gameState.initializePhaseQuestions();
+        this.updateProgressBar();
+        this.updateDisplay();
+        this.generateQuestion();
+        this.updateBackground();
+        
+        document.getElementById('configModal').style.display = 'none';
+        this.pauseGame(this.gameState.PAUSE_TYPES.INITIAL);
+    }
+
+    updateDisplay() {
+        document.getElementById('scoreValue').textContent = this.gameState.score;
+        this.updateLives();
+    }
+
+    animateScoreElement() {
+        const scoreElement = document.getElementById('score');
+        scoreElement.classList.remove('score-highlight');
+        void scoreElement.offsetWidth;
+        scoreElement.classList.add('score-highlight');
+    }
+
+    init() {
+        this.gameState.loadFromLocalStorage();
+        this.gameState.initializePhaseQuestions();
+        this.updateProgressBar();
+        this.updateDisplay();
+        this.generateQuestion();
+        this.updateBackground();
+        this.gameState.setIsPaused(true);
+        document.getElementById('game').classList.add('game-paused');
+        
+        this.showSavedGamesModal();
+    }
+
+    // Adicionar método adjustZoom
+    adjustZoom() {
+        const container = document.querySelector('.container');
+        const windowHeight = window.innerHeight;
+        const contentHeight = container.scrollHeight;
+        
+        let zoomLevel = ((windowHeight / (contentHeight)));
+        zoomLevel = Math.min(Math.max(zoomLevel, 0.5), 1);
+        
+        document.body.style.zoom = zoomLevel;
+    }
+
+    // Adicionar método showHighScoresModal
+    showHighScoresModal() {
+        const modal = document.getElementById('highScoresModal');
+        const highScoresList = document.getElementById('highScoresListModal');
+        const scores = this.loadHighScores();
+        
         highScoresList.innerHTML = scores
             .map((score, index) => `
-                <div class="score-item ${newScore && score.score === newScore.score && score.name === newScore.name ? 'highlight' : ''}">
+                <div class="score-item">
                     <span class="score-rank">#${index + 1}</span>
                     <span class="score-name">${score.name}</span>
                     <span class="score-value">${score.score}</span>
                 </div>
             `)
             .join('');
-        console.log('HTML dos high scores atualizado');
-    } else {
-        console.log('Elemento highScoresList não encontrado');
-    }
-}
-
-// Atualizar a função gameOver
-function gameOver() {
-    const modal = document.getElementById('gameOverModal');
-    const playerNameInput = document.getElementById('playerName');
-    const saveScoreBtn = document.getElementById('saveScore');
-    
-    // Resetar o estado do modal
-    document.getElementById('finalScore').textContent = score;
-    playerNameInput.value = '';
-    playerNameInput.disabled = false;
-    playerNameInput.style.borderColor = '#1e3c72';
-    saveScoreBtn.disabled = false;
-    saveScoreBtn.textContent = 'Salvar Pontuação';
-    saveScoreBtn.style.backgroundColor = ''; // Remove o estilo inline
-    
-    // Atualizar a lista de high scores
-    updateHighScoresDisplay();
-    
-    // Mostrar o modal
-    modal.style.display = 'block';
-    
-    // Focar no input do nome
-    playerNameInput.focus();
-    
-    // Resetar vidas para o valor configurado
-    lives = parseInt(localStorage.getItem('maxLives') || '4');
-}
-
-// Atualizar a função addHighScore com logs
-function addHighScore(name, scoreValue) {
-    console.log('Tentando adicionar high score:', { name, score: scoreValue });
-    
-    const newScore = { 
-        name, 
-        score: scoreValue, 
-        date: new Date().toISOString() 
-    };
-    
-    let highScores = loadHighScores();
-    console.log('High scores atuais:', highScores);
-    
-    // Adiciona o novo score e ordena
-    highScores.push(newScore);
-    highScores.sort((a, b) => b.score - a.score);
-    console.log('High scores após adicionar novo:', highScores);
-    
-    // Mantém apenas os top scores
-    highScores = highScores.slice(0, MAX_HIGH_SCORES);
-    console.log('High scores após slice:', highScores);
-    
-    // Salva os scores atualizados
-    saveHighScores(highScores);
-    
-    // Atualiza a exibição com destaque para o novo score
-    updateHighScoresDisplay(newScore);
-    
-    return highScores.findIndex(s => s.name === name && s.score === scoreValue) + 1;
-}
-
-// Modifica a função checkAnswer
-function checkAnswer() {
-    const userAnswer = parseInt(document.getElementById('answer').value);
-    const questionDiv = document.getElementById('question');
-    const scoreElement = document.getElementById('score');
-    
-    if (userAnswer === currentQuestion.answer) {
-        playSound('correctSound');
-        score += 10;
-        phaseStats.corrects++;
         
-        const key = `${currentQuestion.num1}x${currentQuestion.num2}`;
-        if (questions[key].masteryLevel < 2) {
-            questions[key].masteryLevel++;
-        }
-        
-        updateHistory(true);
-        scoreElement.classList.remove('score-highlight');
-        void scoreElement.offsetWidth;
-        scoreElement.classList.add('score-highlight');
-    } else {
-        playSound('wrongSound');
-        phaseStats.errors++;
-        const key = `${currentQuestion.num1}x${currentQuestion.num2}`;
-        questions[key].masteryLevel = 0;
-        
-        // Pausar o jogo e mostrar a resposta correta
-        isPaused = true;
-        document.getElementById('game').classList.add('game-paused');
-        
-        // Atualizar e mostrar o modal de resposta incorreta
-        const modal = document.getElementById('wrongAnswerModal');
-        modal.querySelector('.question-display').textContent = 
-            `${currentQuestion.num1} × ${currentQuestion.num2}`;
-        modal.querySelector('.correct-answer').textContent = 
-            currentQuestion.answer;
         modal.style.display = 'block';
+    }
+
+    showSavedGamesModal() {
+        // Pausar o jogo atual se houver um jogador
+        if (this.gameState.playerName) {
+            this.gameState.setIsPaused(true);
+            document.getElementById('game').classList.add('game-paused');
+        }
+
+        const modal = document.getElementById('savedGamesModal');
+        const listContainer = document.getElementById('savedGamesList');
+        const closeButton = document.getElementById('closeSavedGames');
+        const modalTitle = modal.querySelector('h2');
+        const savedGames = this.gameState.listAllSavedGames();
         
-        // Focar no botão OK
-        document.getElementById('continueAfterWrong').focus();
+        // Mostrar/ocultar botão de fechar e ajustar título baseado no estado do jogo
+        if (!this.gameState.playerName) {
+            closeButton.style.display = 'none';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            modalTitle.innerHTML = '<i class="fas fa-play"></i> Bem-vindo ao Jogo da Tabuada!';
+            
+            // Adicionar mensagem de boas-vindas se não existir
+            if (!modal.querySelector('.pause-message')) {
+                modalTitle.insertAdjacentHTML(
+                    'afterend',
+                    '<p class="pause-message">Pratique suas habilidades de multiplicação!</p>'
+                );
+            }
+        } else {
+            closeButton.style.display = 'block';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            modalTitle.innerHTML = '<i class="fas fa-bars"></i> Menu do Jogo';
+            
+            // Remover mensagem de boas-vindas se existir
+            const welcomeMessage = modal.querySelector('.pause-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+        }
         
-        loseLife();
-        updateHistory(false);
-        return; // Interrompe a execução aqui
-    }
-    
-    saveProgress();
-    updateDisplay();
-    generateQuestion();
-}
-
-function updateDisplay() {
-    document.getElementById('scoreValue').textContent = score;
-    updateLives();
-}
-
-function playSound(soundId) {
-    const sound = document.getElementById(soundId);
-    sound.currentTime = 0;
-    sound.play();
-}
-
-// Funções do Modal
-function openModal() {
-    document.getElementById('configModal').style.display = 'block';
-    // Seleciona a dificuldade atual no select
-    document.getElementById('difficulty').value = currentDifficulty;
-}
-
-function closeModal() {
-    document.getElementById('configModal').style.display = 'none';
-}
-
-function saveConfig() {
-    const newDifficulty = document.getElementById('difficulty').value;
-    const newLivesCount = parseInt(document.getElementById('lives-count').value);
-    let shouldUpdateDisplay = false;
-    
-    if (newDifficulty !== currentDifficulty) {
-        currentDifficulty = newDifficulty;
-        localStorage.setItem('gameDifficulty', currentDifficulty);
-        startTimer();
-    }
-    
-    if (newLivesCount !== MAX_LIVES) {
-        lives = newLivesCount;
-        localStorage.setItem('maxLives', newLivesCount.toString());
-        shouldUpdateDisplay = true;
-    }
-    
-    if (shouldUpdateDisplay) {
-        updateDisplay();
-    }
-    
-    closeModal();
-}
-
-// Event Listeners para o modal
-document.getElementById('configBtn').addEventListener('click', openModal);
-document.getElementById('closeModal').addEventListener('click', closeModal);
-document.getElementById('saveConfig').addEventListener('click', saveConfig);
-
-// Fechar modal quando clicar fora dele
-window.addEventListener('click', function(event) {
-    const modal = document.getElementById('configModal');
-    if (event.target === modal) {
-        closeModal();
-    }
-});
-
-// Remover as definições de window.onload e substituir por addEventListener
-window.addEventListener('load', () => {
-    console.log('Iniciando o jogo...');
-    
-    // Carregar configurações salvas
-    const savedDifficulty = localStorage.getItem('gameDifficulty');
-    const savedLives = localStorage.getItem('maxLives');
-    
-    if (savedDifficulty) {
-        console.log('Dificuldade salva encontrada:', savedDifficulty);
-        currentDifficulty = savedDifficulty;
-        document.getElementById('difficulty').value = currentDifficulty;
-    }
-    
-    if (savedLives) {
-        console.log('Número de vidas salvo encontrado:', savedLives);
-        lives = parseInt(savedLives);
-        document.getElementById('lives-count').value = savedLives;
-    } else {
-        document.getElementById('lives-count').value = '4'; // Valor padrão
-    }
-    
-    // Carregar fase salva (se existir)
-    const savedPhase = localStorage.getItem('currentPhase');
-    console.log('Fase salva:', savedPhase);
-    if (savedPhase) {
-        currentPhase = parseInt(savedPhase);
-    } else {
-        currentPhase = 2;
-        localStorage.setItem('currentPhase', currentPhase);
-    }
-    
-    console.log('Fase atual:', currentPhase);
-    
-    // Inicializar as questões para a fase atual
-    initializePhaseQuestions(currentPhase);
-    
-    // Carregar progresso específico da fase
-    loadProgress();
-    
-    // Atualizar a interface
-    updateProgressBar();
-    updateDisplay();
-    
-    // Inicializar o histórico vazio
-    attemptsHistory = [];
-    updateHistory();
-    
-    // Gerar a primeira questão
-    generateQuestion();
-    
-    // Inicializar o jogo pausado com mensagem inicial
-    isPaused = true;
-    document.getElementById('game').classList.add('game-paused');
-    pauseGame(PAUSE_TYPES.INITIAL);
-    
-    // Carregar fase mais alta alcançada
-    const savedHighestPhase = localStorage.getItem('highestPhase');
-    if (savedHighestPhase) {
-        highestPhase = parseInt(savedHighestPhase);
-    } else {
-        highestPhase = 2;
-        localStorage.setItem('highestPhase', highestPhase);
-    }
-});
-
-// Salvar configurações quando mudar
-document.getElementById('difficulty').addEventListener('change', function() {
-    localStorage.setItem('gameDifficulty', this.value);
-});
-
-// Entrada pelo teclado
-document.getElementById('answer').addEventListener('keypress', function(event) {
-    if (event.key === 'Enter') {
-        checkAnswer();
-    }
-});
-
-// Garantir que a função updateHistory esteja definida corretamente:
-function updateHistory(isCorrect) {
-    // Se isCorrect não foi fornecido, apenas atualiza a exibição
-    if (typeof isCorrect === 'boolean') {
-        // Adiciona nova tentativa no final do array
-        attemptsHistory.push(isCorrect);
+        if (savedGames.length === 0) {
+            listContainer.innerHTML = '<div class="no-saved-games">Nenhuma partida salva</div>';
+        } else {
+            listContainer.innerHTML = savedGames.map(game => `
+                <div class="saved-game-item" data-game-id="${game.id}">
+                    <div class="game-info-container">
+                        <div class="game-title">${game.playerName || 'Jogador sem nome'}</div>
+                        <div class="game-details">
+                            Fase: ${game.currentPhase} | Pontos: ${game.score} | 
+                            Última jogada: ${new Date(game.lastPlayedAt).toLocaleDateString()}
+                        </div>
+                    </div>
+                    <div class="game-actions">
+                        ${game.lives > 0 ? `
+                            <button class="game-action-btn load-game-btn no-margin-bottom" onclick="gameController.loadSavedGame('${game.id}')">
+                                <i class="fas fa-play"></i> Jogar
+                            </button>
+                        ` : `
+                            <span class="game-over-badge no-margin-bottom">
+                                <i class="fas fa-skull"></i> <small>Game Over</small>
+                            </span>
+                        `}
+                        <button class="game-action-btn delete-game-btn no-margin-bottom" onclick="gameController.deleteSavedGame('${game.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
         
-        // Mantém apenas as últimas 10 tentativas
-        if (attemptsHistory.length > MAX_HISTORY) {
-            attemptsHistory = attemptsHistory.slice(-MAX_HISTORY);
+        modal.style.display = 'block';
+    }
+
+    loadSavedGame(gameId) {
+        if (this.gameState.loadGame(gameId)) {
+            this.updateDisplay();
+            this.updateProgressBar();
+            this.generateQuestion();
+            this.updateBackground();
+            document.getElementById('savedGamesModal').style.display = 'none';
+            this.pauseGame(this.gameState.PAUSE_TYPES.TIMER_CLICK);
+        } else {
+            alert('Erro ao carregar o jogo!');
         }
     }
-    
-    // Atualiza a exibição do histórico
-    const historyContainer = document.getElementById('attempts-history');
-    if (historyContainer) {
-        historyContainer.innerHTML = '';
-        
-        attemptsHistory.forEach((attempt, index) => {
-            const icon = document.createElement('i');
-            icon.className = `fas ${attempt ? 'fa-check-circle' : 'fa-times-circle'} attempt-icon ${attempt ? 'correct' : 'wrong'}`;
-            if (index === attemptsHistory.length - 1) {
-                icon.classList.add('new');
+
+    deleteSavedGame(gameId) {
+        if (confirm('Tem certeza que deseja excluir esta partida?')) {
+            if (this.gameState.deleteGame(gameId)) {
+                this.showSavedGamesModal(); // Atualiza a lista
+            } else {
+                alert('Erro ao excluir a partida!');
             }
-            historyContainer.appendChild(icon);
-        });
+        }
     }
-}
 
-// Adiciona handler para o botão de próxima fase
-document.getElementById('startNextPhase').addEventListener('click', function() {
-    currentPhase++;
-    // Atualizar a fase mais alta se necessário
-    if (currentPhase > highestPhase) {
-        highestPhase = currentPhase;
-        localStorage.setItem('highestPhase', highestPhase);
-    }
-    
-    localStorage.setItem('currentPhase', currentPhase);
-    initializePhaseQuestions(currentPhase);
-    updateProgressBar();
-    document.getElementById('nextPhaseModal').style.display = 'none';
-    
-    // Iniciar a nova fase pausada com mensagem específica
-    isPaused = true;
-    document.getElementById('game').classList.add('game-paused');
-    pauseGame(PAUSE_TYPES.NEXT_PHASE);
-    
-    generateQuestion();
-});
-
-// Atualizar a função changePhase para usar highestPhase
-function changePhase(newPhase) {
-    if (newPhase >= 2 && newPhase <= highestPhase) {
-        currentPhase = newPhase;
-        localStorage.setItem('currentPhase', currentPhase);
-        initializePhaseQuestions(currentPhase);
+    updateProgressBar() {
+        console.log('=== Atualizando Barra de Progresso ===');
         
-        // Atualizar a barra de progresso usando highestPhase
         document.querySelectorAll('.phase').forEach(phase => {
             const phaseNumber = parseInt(phase.dataset.phase);
-            if (phaseNumber <= highestPhase) {
-                phase.classList.remove('locked');
-                if (phaseNumber === currentPhase) {
-                    phase.innerHTML = `<i class="fas fa-calculator"></i><span>${phaseNumber}</span>`;
-                } else {
+            const progress = this.gameState.getPhaseProgress(phaseNumber);
+
+            console.log('Atualizando fase:', {
+                numero: phaseNumber,
+                progresso: progress
+            });
+
+            if (phaseNumber <= this.gameState.highestPhase) {
+                // Remover todas as classes primeiro
+                phase.classList.remove('locked', 'half-complete', 'complete');
+                
+                // Aplicar a classe apropriada baseada no progresso
+                switch (progress) {
+                    case 'half':
+                        phase.classList.add('half-complete');
+                        break;
+                    case 'complete':
+                        phase.classList.add('complete');
+                        break;
+                    case 'started':
+                        // Mantém apenas a cor base (azul)
+                        break;
+                }
+
+                // Atualizar o conteúdo
+                if (phaseNumber === this.gameState.currentPhase) {
+                    phase.innerHTML = `<i class="fas fa-calculator"></i><span>${phaseNumber}${this.gameState.currentSubPhase}</span>`;
+                } else if (progress === 'complete') {
                     phase.innerHTML = `<i class="fas fa-check"></i><span>${phaseNumber}</span>`;
+                } else {
+                    phase.innerHTML = `<i class="fas fa-calculator"></i><span>${phaseNumber}</span>`;
                 }
             } else {
                 phase.classList.add('locked');
                 phase.innerHTML = `<i class="fas fa-lock"></i><span>${phaseNumber}</span>`;
             }
         });
-        
-        generateQuestion();
     }
 }
 
-// Adicionar evento de clique para as fases na barra de progresso
-document.querySelectorAll('.phase').forEach(phase => {
-    phase.addEventListener('click', function() {
-        const phaseNumber = parseInt(this.dataset.phase);
-        changePhase(phaseNumber);
-    });
-});
-
-// Atualizar o event listener para o botão de jogar novamente
-document.getElementById('restartGame').addEventListener('click', function() {
-    document.getElementById('gameOverModal').style.display = 'none';
-    document.getElementById('saveScore').style.display = 'block';
-    document.getElementById('playerName').disabled = false;
-    
-    // Reiniciar para a primeira fase
-    currentPhase = 2;
-    localStorage.setItem('currentPhase', currentPhase);
-    
-    // Reinicializar o jogo
-    initializePhaseQuestions(currentPhase);
-    lives = 4;
-    score = 0;
-    
-    // Limpar o histórico de tentativas
-    attemptsHistory = [];
-    const historyContainer = document.getElementById('attempts-history');
-    if (historyContainer) {
-        historyContainer.innerHTML = '';
-    }
-    
-    updateProgressBar(); // Atualizar a barra de progresso para mostrar apenas fase 2 desbloqueada
-    updateDisplay();
-    
-    // Iniciar pausado com mensagem inicial
-    isPaused = true;
-    document.getElementById('game').classList.add('game-paused');
-    pauseGame(PAUSE_TYPES.INITIAL);
-    
-    generateQuestion();
-});
-
-// Salvar progresso das questões
-function saveProgress() {
-    localStorage.setItem('questions', JSON.stringify(questions));
-}
-
-// Atualizar a função loadProgress para considerar a fase atual
-function loadProgress() {
-    console.log('Tentando carregar progresso salvo');
-    const savedQuestions = localStorage.getItem('questions');
-    if (savedQuestions) {
-        console.log('Progresso encontrado no localStorage');
-        const loadedQuestions = JSON.parse(savedQuestions);
-        
-        // Verificar se as questões carregadas são da fase atual
-        const firstQuestion = Object.keys(loadedQuestions)[0];
-        const savedPhaseNumber = parseInt(firstQuestion.split('x')[0]);
-        
-        if (savedPhaseNumber === currentPhase) {
-            console.log('Carregando questões da fase atual:', currentPhase);
-            questions = loadedQuestions;
-        } else {
-            console.log('Questões salvas são de outra fase, inicializando nova fase');
-            initializePhaseQuestions(currentPhase);
-        }
-    } else {
-        console.log('Nenhum progresso encontrado no localStorage');
-    }
-}
-
-// Atualizar a função resetProgress para limpar o histórico
-function resetProgress() {
-    // Salvar os high scores antes de limpar o localStorage
-    const highScores = loadHighScores();
-    
-    // Limpar localStorage
-    localStorage.clear();
-    
-    // Restaurar os high scores
-    saveHighScores(highScores);
-    
-    // Resetar o estado do jogo
-    currentPhase = 2;
-    questions = {};
-    initializePhaseQuestions(currentPhase);
-    lives = 4;
-    score = 0;
-    
-    // Limpar o histórico de tentativas
-    attemptsHistory = [];
-    const historyContainer = document.getElementById('attempts-history');
-    if (historyContainer) {
-        historyContainer.innerHTML = '';
-    }
-    
-    // Atualizar a interface
-    updateProgressBar();
-    updateDisplay();
-    generateQuestion();
-}
-
-// Adicionar função para resetar apenas os high scores
-function resetHighScores() {
-    if (confirm('Tem certeza que deseja limpar o ranking? Esta ação não pode ser desfeita.')) {
-        localStorage.removeItem('highScores');
-        updateHighScoresDisplay();
-        alert('Ranking limpo com sucesso!');
-    }
-}
-
-// Adicionar event listener para o botão de reset do ranking
-document.getElementById('resetHighScores').addEventListener('click', resetHighScores);
-
-// Adicionar o event listener para o botão de reiniciar
-document.getElementById('restartBtn').addEventListener('click', function() {
-    if (confirm('Tem certeza que deseja reiniciar o jogo? Todo o progresso será perdido.')) {
-        resetProgress();
-        closeModal(); // Fecha qualquer modal que esteja aberto
-    }
-});
-
-// Atualizar o event listener para o botão de salvar pontuação
-document.getElementById('saveScore').addEventListener('click', function() {
-    console.log('Botão de salvar clicado');
-    const playerNameInput = document.getElementById('playerName');
-    const playerName = playerNameInput.value.trim();
-    
-    console.log('Nome do jogador:', playerName);
-    console.log('Pontuação atual:', score);
-    
-    if (playerName) {
-        console.log('Tentando salvar pontuação');
-        // Adiciona o novo score
-        addHighScore(playerName, score);
-        
-        console.log('Desabilitando input e botão');
-        // Desabilita o input e oculta o botão após salvar
-        playerNameInput.disabled = true;
-        this.style.display = 'none'; // Oculta o botão ao invés de apenas desabilitá-lo
-    } else {
-        console.log('Nome vazio, mostrando feedback');
-        // Feedback visual se o nome estiver vazio
-        playerNameInput.style.borderColor = '#ff4757';
-        playerNameInput.placeholder = 'Digite seu nome primeiro!';
-        
-        // Volta ao normal após 2 segundos
-        setTimeout(() => {
-            playerNameInput.style.borderColor = '#1e3c72';
-            playerNameInput.placeholder = 'Seu nome';
-        }, 2000);
-    }
-});
-
-// Adicionar event listener para o input do nome permitir salvar com Enter
-document.getElementById('playerName').addEventListener('keypress', function(event) {
-    if (event.key === 'Enter') {
-        document.getElementById('saveScore').click();
-    }
-});
-
-// Atualizar os event listeners para os botões de high scores
-document.getElementById('showHighScores').addEventListener('click', showHighScoresModal);
-document.getElementById('showHighScoresMobile').addEventListener('click', showHighScoresModal);
-
-// Criar função separada para mostrar o modal (evitar duplicação de código)
-function showHighScoresModal() {
-    const modal = document.getElementById('highScoresModal');
-    const highScoresList = document.getElementById('highScoresListModal');
-    const scores = loadHighScores();
-    
-    highScoresList.innerHTML = scores
-        .map((score, index) => `
-            <div class="score-item">
-                <span class="score-rank">#${index + 1}</span>
-                <span class="score-name">${score.name}</span>
-                <span class="score-value">${score.score}</span>
-            </div>
-        `)
-        .join('');
-    
-    modal.style.display = 'block';
-}
-
-// Atualizar o event listener de clique fora do modal para incluir o novo modal
-window.addEventListener('click', function(event) {
-    const configModal = document.getElementById('configModal');
-    const highScoresModal = document.getElementById('highScoresModal');
-    const pauseModal = document.getElementById('pauseModal');
-    
-    if (event.target === configModal) {
-        closeModal();
-    }
-    if (event.target === highScoresModal) {
-        highScoresModal.style.display = 'none';
-    }
-    // Não fechar o modal de pausa ao clicar fora
-});
-
-// Adicionar pausa quando a janela perde foco
-window.addEventListener('blur', () => {
-    if (!isPaused) {
-        pauseGame();
-    }
-});
-
-// Adicionar event listener para o timer
-document.getElementById('timer').addEventListener('click', () => pauseGame(PAUSE_TYPES.TIMER_CLICK));
-
-// Adicionar event listener para o botão de retomar
-document.getElementById('resumeGame').addEventListener('click', resumeGame);
-
-// Atualizar a função para ajustar o zoom
-function adjustZoom() {
-    const container = document.querySelector('.container');
-    const windowHeight = window.innerHeight;
-    const contentHeight = container.scrollHeight;
-    
-    // Calcular o zoom necessário (com uma pequena margem de segurança)
-    // Adicionando 0.06 (6%) ao cálculo
-    // let zoomLevel = ((windowHeight / (contentHeight + 40)) * 0.95) + 0.06;
-
-    // Removendo a 'margem de segurança' pois o zoom já é suficiente.
-    let zoomLevel = ((windowHeight / (contentHeight)));
-    
-    // Limitar o zoom entre 0.5 e 1 para evitar distorções extremas
-    zoomLevel = Math.min(Math.max(zoomLevel, 0.5), 1);
-    
-    // Aplicar o zoom
-    document.body.style.zoom = zoomLevel;
-}
-
-// Adicionar chamada da função no carregamento e no redimensionamento
-window.addEventListener('load', adjustZoom);
-window.addEventListener('resize', adjustZoom);
-
-// Adicionar event listener para o botão de fechar o modal de ranking
-document.getElementById('closeHighScores').addEventListener('click', function() {
-    document.getElementById('highScoresModal').style.display = 'none';
-});
-
-// Adicionar event listener para o botão OK do modal de resposta incorreta
-document.getElementById('continueAfterWrong').addEventListener('click', function() {
-    document.getElementById('wrongAnswerModal').style.display = 'none';
-    isPaused = false;
-    document.getElementById('game').classList.remove('game-paused');
-    
-    // Continuar o jogo
-    saveProgress();
-    updateDisplay();
-    generateQuestion();
-});
-
-// Adicionar event listener para permitir pressionar Enter para continuar
-document.addEventListener('keypress', function(event) {
-    if (event.key === 'Enter' && document.getElementById('wrongAnswerModal').style.display === 'block') {
-        document.getElementById('continueAfterWrong').click();
-    }
-});
-  
+// Criar instância do controlador quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', () => {
+    window.gameController = new GameController();
+    window.gameController.init();
+}); 
