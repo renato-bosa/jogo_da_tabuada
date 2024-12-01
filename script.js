@@ -277,6 +277,33 @@ class GameState {
         
         return complete;
     }
+
+    accumulatePhaseStats() {
+        // Guardar estatísticas acumuladas ao passar da subfase A para B
+        if (!this.accumulatedStats) {
+            this.accumulatedStats = {
+                errors: 0,
+                corrects: 0,
+                totalTime: 0,
+                startTime: this.phaseStats.startTime
+            };
+        }
+        
+        // Acumular estatísticas atuais
+        this.accumulatedStats.errors += this.phaseStats.errors;
+        this.accumulatedStats.corrects += this.phaseStats.corrects;
+        this.accumulatedStats.totalTime += Date.now() - this.phaseStats.startTime;
+    }
+
+    resetPhaseStats() {
+        this.phaseStats = {
+            errors: 0,
+            corrects: 0,
+            totalTime: 0,
+            startTime: Date.now()
+        };
+        this.accumulatedStats = null; // Limpar estatísticas acumuladas
+    }
 }
 
 class GameController {
@@ -648,6 +675,13 @@ class GameController {
     }
 
     pauseGame(pauseType = this.gameState.PAUSE_TYPES.TIMER_CLICK) {
+        console.log('=== Chamada do pauseGame ===', {
+            tipo: pauseType,
+            fase: this.gameState.currentPhase,
+            subfase: this.gameState.currentSubPhase,
+            trace: new Error().stack
+        });
+        
         this.gameState.setIsPaused(true);
         clearInterval(this.gameState.timerInterval);
         document.getElementById('game').classList.add('game-paused');
@@ -664,24 +698,23 @@ class GameController {
         
         switch(pauseType) {
             case this.gameState.PAUSE_TYPES.INITIAL:
-                /* modalTitle.innerHTML = '<i class="fas fa-play"></i> Bem-vindo ao Jogo da Tabuada!';*/
                 modalTitle.innerHTML = '<i class="fas fa-play"></i> Pronto para começar?';
                 resumeButton.innerHTML = '<i class="fas fa-play"></i> Iniciar Jogo';
-                /*
-                modalTitle.insertAdjacentHTML(
-                    'afterend',
-                    '<p class="pause-message">Pratique suas habilidades de multiplicação.<br />Pronto para começar?</p>'
-                );
-                */
                 break;
                 
             case this.gameState.PAUSE_TYPES.NEXT_PHASE:
-                modalTitle.innerHTML = `<i class="fas fa-calculator"></i> Tabuada do ${this.gameState.currentPhase}`;
-                resumeButton.innerHTML = '<i class="fas fa-play"></i> Começar Nova Fase';
-                modalTitle.insertAdjacentHTML(
-                    'afterend',
-                    '<p class="pause-message">Prepare-se para a próxima fase!</p>'
-                );
+                // Mostrar mensagem especial apenas quando iniciar uma nova fase numérica (subfase A)
+                if (this.gameState.currentSubPhase === 'A') {
+                    modalTitle.innerHTML = `<i class="fas fa-calculator"></i> Tabuada do ${this.gameState.currentPhase}`;
+                    resumeButton.innerHTML = '<i class="fas fa-play"></i> Começar Nova Fase';
+                    modalTitle.insertAdjacentHTML(
+                        'afterend',
+                        '<p class="pause-message">Prepare-se para a próxima fase!</p>'
+                    );
+                } else {
+                    modalTitle.innerHTML = '<i class="fas fa-pause"></i> Jogo Pausado';
+                    resumeButton.innerHTML = '<i class="fas fa-play"></i> Continuar Jogo';
+                }
                 break;
                 
             default:
@@ -777,6 +810,7 @@ class GameController {
         // Primeiro determinar a mensagem correta
         const currentPhaseText = `${this.gameState.currentPhase}${this.gameState.currentSubPhase}`;
         let nextPhaseText;
+        let showStats = false;
         
         if (this.gameState.currentSubPhase === 'A') {
             // Se estamos na subfase A, próxima é B da mesma fase
@@ -784,22 +818,123 @@ class GameController {
         } else {
             // Se estamos na subfase B, próxima é A da próxima fase
             nextPhaseText = `${this.gameState.currentPhase + 1}A`;
+            showStats = true; // Mostrar estatísticas apenas ao completar a fase inteira
         }
 
         // Atualizar o modal com as mensagens corretas
         const modal = document.getElementById('nextPhaseModal');
-        document.getElementById('currentPhase').textContent = currentPhaseText;
-        document.getElementById('nextPhase').textContent = nextPhaseText;
+        const modalContent = modal.querySelector('.modal-content');
+        
+        // Limpar conteúdo anterior
+        modalContent.innerHTML = `
+            <h2>Parabéns! <i class="fas fa-star"></i></h2>
+            <p>Você dominou a tabuada do <span id="currentPhase">${currentPhaseText}</span>!</p>
+            ${this.gameState.lives < this.gameState.MAX_LIVES ? `
+                <div class="bonus-life">
+                    <i class="fas fa-heart"></i>
+                    Você ganhou uma vida extra!
+                </div>
+            ` : ''}
+            ${showStats ? `
+                <div class="phase-stats">
+                    <div class="stat-item">
+                        <i class="fas fa-check"></i>
+                        <span>Acertos: ${this.gameState.phaseStats.corrects}</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-times"></i>
+                        <span>Erros: ${this.gameState.phaseStats.errors}</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-percentage"></i>
+                        <span>Taxa de Acerto: ${Math.round((this.gameState.phaseStats.corrects / (this.gameState.phaseStats.corrects + this.gameState.phaseStats.errors)) * 100)}%</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-clock"></i>
+                        <span>Tempo Total: ${Math.round((Date.now() - this.gameState.phaseStats.startTime) / 1000)}s</span>
+                    </div>
+                </div>
+            ` : ''}
+            <p>Próxima fase: Tabuada do <span id="nextPhase">${nextPhaseText}</span></p>
+            <button id="startNextPhase" class="next-phase-btn">
+                Continuar <i class="fas fa-arrow-right"></i>
+            </button>
+        `;
 
         // Depois atualizar o estado do jogo
         if (this.gameState.currentSubPhase === 'A') {
             console.log('Avançando para subfase B');
+            // Acumular estatísticas da subfase A
+            this.gameState.accumulatePhaseStats();
             this.gameState.currentSubPhase = 'B';
+            
+            // Ganhar vida ao completar subfase A
+            if (this.gameState.lives < this.gameState.MAX_LIVES) {
+                this.gainLife();
+            }
+            
+            // Reiniciar estatísticas para a subfase B
+            this.gameState.phaseStats = {
+                errors: 0,
+                corrects: 0,
+                totalTime: 0,
+                startTime: Date.now()
+            };
             this.gameState.initializePhaseQuestions();
         } else {
             console.log('Completou fase inteira, avançando para próxima fase');
+            // Acumular estatísticas da subfase B antes de mostrar
+            this.gameState.accumulatePhaseStats();
+            
+            // Ganhar vida ao completar a fase inteira
+            if (this.gameState.lives < this.gameState.MAX_LIVES) {
+                this.gainLife();
+            }
+            
+            // Usar estatísticas acumuladas no template
+            const stats = this.gameState.accumulatedStats;
+            modalContent.innerHTML = `
+                <h2>Parabéns! <i class="fas fa-star"></i></h2>
+                <p>Você dominou a tabuada do <span id="currentPhase">${this.gameState.currentPhase}</span>!</p>
+                ${this.gameState.lives < this.gameState.MAX_LIVES ? `
+                    <div class="bonus-life">
+                        <i class="fas fa-heart"></i>
+                        Você ganhou uma vida extra!
+                    </div>
+                ` : ''}
+                ${showStats ? `
+                    <div class="phase-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-check"></i>
+                            <span>Acertos: ${stats.corrects}</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-times"></i>
+                            <span>Erros: ${stats.errors}</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-percentage"></i>
+                            <span>Taxa de Acerto: ${Math.round((stats.corrects / (stats.corrects + stats.errors)) * 100)}%</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-clock"></i>
+                            <span>Tempo Total: ${Math.round(stats.totalTime / 1000)}s</span>
+                        </div>
+                    </div>
+                ` : ''}
+                <p>Próxima fase: Tabuada do <span id="nextPhase">${nextPhaseText}</span></p>
+                <button id="startNextPhase" class="next-phase-btn">
+                    Continuar <i class="fas fa-arrow-right"></i>
+                </button>
+            `;
+            
+            // Chamar o efeito de confete após mostrar o modal
+            setTimeout(() => this.celebrateCompletion(), 50);
+            
+            // Resetar estatísticas para a próxima fase
+            this.gameState.resetPhaseStats();
             this.gameState.currentPhase++;
-            this.gameState.currentSubPhase = 'A'; // Importante: começar pela subfase A
+            this.gameState.currentSubPhase = 'A';
             if (this.gameState.currentPhase > this.gameState.highestPhase) {
                 this.gameState.highestPhase = this.gameState.currentPhase;
             }
@@ -815,6 +950,40 @@ class GameController {
         this.updateProgressBar();
         modal.style.display = 'block';
         
+        // Reattach event listener para o novo botão
+        document.getElementById('startNextPhase').addEventListener('click', () => {
+            console.log('=== Clique no botão Continuar ===');
+            console.log('Estado atual:', {
+                fase: this.gameState.currentPhase,
+                subfase: this.gameState.currentSubPhase
+            });
+            
+            modal.style.display = 'none';
+            
+            // Se completou a fase inteira (subfase B), mostra o modal de pausa
+            if (this.gameState.currentSubPhase === 'B') {
+                console.log('Subfase B: Continuando jogo sem pausar');
+                // Apenas fecha o modal e continua o jogo
+                this.gameState.setIsPaused(false);
+                document.getElementById('game').classList.remove('game-paused');
+                this.generateQuestion();
+            } else {
+                console.log('Subfase A: Mostrando modal de pausa para próxima fase');
+                // Completou a fase inteira, mostra o modal de pausa para próxima fase
+                this.gameState.setIsPaused(true);
+                document.getElementById('game').classList.add('game-paused');
+                this.updateBackground();
+                this.pauseGame(this.gameState.PAUSE_TYPES.NEXT_PHASE);
+                this.generateQuestion();
+            }
+        });
+        
+        console.log('Estado do jogo após configurar modal:', {
+            fase: this.gameState.currentPhase,
+            subfase: this.gameState.currentSubPhase,
+            pausado: this.gameState.getIsPaused()
+        });
+        
         this.gameState.saveCurrentGame();
     }
 
@@ -826,21 +995,6 @@ class GameController {
     }
 
     initializePhaseListeners() {
-        document.getElementById('startNextPhase').addEventListener('click', () => {
-            document.getElementById('nextPhaseModal').style.display = 'none';
-            
-            // Não incrementar a fase aqui, pois já foi feito no showNextPhaseModal
-            localStorage.setItem('currentPhase', this.gameState.currentPhase);
-            localStorage.setItem('highestPhase', this.gameState.highestPhase);
-            
-            this.gameState.setIsPaused(true);
-            document.getElementById('game').classList.add('game-paused');
-            this.updateBackground();
-            this.pauseGame(this.gameState.PAUSE_TYPES.NEXT_PHASE);
-            
-            this.generateQuestion();
-        });
-
         document.querySelectorAll('.phase').forEach(phase => {
             phase.addEventListener('click', () => {
                 const phaseNumber = parseInt(phase.dataset.phase);
@@ -1292,6 +1446,74 @@ class GameController {
                 phase.innerHTML = `<i class="fas fa-lock"></i><span>${phaseNumber}</span>`;
             }
         });
+    }
+
+    // Adicionar novo método para o efeito de confete
+    celebrateCompletion() {
+        // Configurar o canvas do confete
+        const myCanvas = document.createElement('canvas');
+        myCanvas.style.position = 'fixed';
+        myCanvas.style.top = '0';
+        myCanvas.style.left = '0';
+        myCanvas.style.width = '100%';
+        myCanvas.style.height = '100%';
+        myCanvas.style.pointerEvents = 'none';
+        myCanvas.style.zIndex = '9999';
+        document.body.appendChild(myCanvas);
+
+        const myConfetti = confetti.create(myCanvas, { 
+            resize: true,
+            useWorker: true // Usar Web Worker para melhor performance
+        });
+
+        // Explosão inicial mais intensa
+        myConfetti({
+            particleCount: 200,
+            spread: 150,
+            origin: { y: 0.6 },
+            colors: ['#1e3c72', '#2ed573', '#ffd700', '#ff4757'],
+            disableForReducedMotion: true,
+            /*
+            // Configurações avançadas
+            gravity: 0.8, // Ajustar gravidade para queda mais natural
+            scalar: 1.2, // Tamanho dos confetes
+            ticks: 300, // Duração da animação
+            decay: 0.95 // Taxa de decaimento da velocidade
+            */
+        });
+
+        // Explosões menores em intervalos
+        let count = 0;
+        const interval = setInterval(() => {
+            count++;
+            if (count >= 5) { // Limitar a 5 explosões adicionais
+                clearInterval(interval);
+                
+                // Remover o canvas após os confetes terminarem de cair
+                setTimeout(() => {
+                    if (myCanvas.parentNode === document.body) {
+                        document.body.removeChild(myCanvas);
+                    }
+                }, 5000); // Esperar 5 segundos após a última explosão
+                return;
+            }
+
+            // Explosões menores em posições aleatórias
+            myConfetti({
+                particleCount: 30,
+                spread: 70,
+                origin: { 
+                    x: Math.random(),
+                    y: Math.random() - 0.2
+                },
+                colors: ['#1e3c72', '#2ed573', '#ffd700', '#ff4757'],
+                disableForReducedMotion: true,
+                gravity: 0.8,
+                scalar: 1,
+                ticks: 250,
+                decay: 0.95
+            });
+        }, 300); // Intervalo entre explosões
     }
 }
 
