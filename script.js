@@ -211,18 +211,41 @@ class GameState {
             startTime: Date.now()
         };
         
-        // Definir range baseado na subfase
-        const startNum = this.currentSubPhase === 'A' ? 1 : 6;
-        const endNum = this.currentSubPhase === 'A' ? 5 : 10;
-        
-        for (let i = startNum; i <= endNum; i++) {
-            const key = `${this.currentPhase}x${i}`;
-            this.questions[key] = {
-                num1: this.currentPhase,
-                num2: i,
-                answer: this.currentPhase * i,
-                masteryLevel: 0
-            };
+        if (this.currentPhase === 10) {
+            // Fase especial - sortear questões aleatórias
+            const minTable = this.currentSubPhase === 'A' ? 2 : 6;
+            const maxTable = this.currentSubPhase === 'A' ? 5 : 9;
+            const questionsNeeded = 5;
+            
+            while (Object.keys(this.questions).length < questionsNeeded) {
+                const table = Math.floor(Math.random() * (maxTable - minTable + 1)) + minTable;
+                const number = Math.floor(Math.random() * 10) + 1;
+                const key = `${table}x${number}`;
+                
+                // Evitar questões duplicadas
+                if (!this.questions[key]) {
+                    this.questions[key] = {
+                        num1: table,
+                        num2: number,
+                        answer: table * number,
+                        masteryLevel: 0
+                    };
+                }
+            }
+        } else {
+            // Lógica existente para outras fases
+            const startNum = this.currentSubPhase === 'A' ? 1 : 6;
+            const endNum = this.currentSubPhase === 'A' ? 5 : 10;
+            
+            for (let i = startNum; i <= endNum; i++) {
+                const key = `${this.currentPhase}x${i}`;
+                this.questions[key] = {
+                    num1: this.currentPhase,
+                    num2: i,
+                    answer: this.currentPhase * i,
+                    masteryLevel: 0
+                };
+            }
         }
     }
 
@@ -317,7 +340,8 @@ class GameController {
             6: 'img/fase-6-landscape.webp',
             7: 'img/fase-7-landscape.webp',
             8: 'img/fase-8-landscape.webp',
-            9: 'img/fase-9-landscape.webp'
+            9: 'img/fase-9-landscape.webp',
+            10: 'img/fase-10-landscape.webp'
         };
         this.initializeEventListeners();
     }
@@ -807,28 +831,108 @@ class GameController {
         this.gameState.setIsPaused(true);
         clearInterval(this.gameState.timerInterval);
         
+        // Verificar se completou a fase 10B (Zerou o jogo)
+        if (this.gameState.currentPhase === 10 && this.gameState.currentSubPhase === 'B' && this.gameState.isSubPhaseComplete()) {
+            // Mostrar modal especial de conclusão do jogo
+            const modal = document.getElementById('nextPhaseModal');
+            const modalContent = modal.querySelector('.modal-content');
+            
+            // Acumular estatísticas finais
+            this.gameState.accumulatePhaseStats();
+            const stats = this.gameState.accumulatedStats;
+            
+            modalContent.innerHTML = `
+                <h2><i class="fas fa-crown"></i> Parabéns!</h2>
+                <p>Você completou a última fase do Jogo da Tabuada!</p>
+                <div class="phase-stats">
+                    <div class="stat-item">
+                        <i class="fas fa-check"></i>
+                        <span>Acertos: ${stats.corrects}</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-times"></i>
+                        <span>Erros: ${stats.errors}</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-percentage"></i>
+                        <span>Taxa de Acerto: ${Math.round((stats.corrects / (stats.corrects + stats.errors)) * 100)}%</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-clock"></i>
+                        <span>Tempo Total: ${Math.round(stats.totalTime / 1000)}s</span>
+                    </div>
+                </div>
+                <p>Você pode continuar jogando para melhorar a sua pontuação e suas habilidades!</p>
+                <button id="startNextPhase" class="next-phase-btn">
+                    Continuar <i class="fas fa-redo"></i>
+                </button>
+            `;
+            
+            // Chamar o efeito de confete especial
+            setTimeout(() => {
+                // Chama o confete dourado primeiro
+                this.celebrateGameCompletion();
+                // Chama o confete colorido normal com um pequeno atraso
+                setTimeout(() => this.celebrateCompletion(), 50);
+            }, 50);
+            
+            modal.style.display = 'block';
+            
+            // Reattach event listener para o botão
+            document.getElementById('startNextPhase').addEventListener('click', () => {
+                modal.style.display = 'none';
+                // Reiniciar a fase 10 ao invés de avançar
+                this.gameState.currentSubPhase = 'A';
+                this.gameState.initializePhaseQuestions();
+                this.gameState.resetPhaseStats();
+                this.generateQuestion();
+                this.gameState.setIsPaused(false);
+                document.getElementById('game').classList.remove('game-paused');
+            });
+            
+            return;
+        }
+
         // Primeiro determinar a mensagem correta
-        const currentPhaseText = `${this.gameState.currentPhase}${this.gameState.currentSubPhase}`;
+
+        // Determinar a mensagem de "você dominou"
+        if (this.gameState.currentPhase != 10) {
+            var currentPhaseText = `tabuada do <span id="currentPhase">${this.gameState.currentPhase} (parte ${this.gameState.currentSubPhase})</span>`;
+        } else {
+            var currentPhaseText = `<span id="currentPhase">Fase Final (parte ${this.gameState.currentSubPhase})</span>`;
+        }
+
         let nextPhaseText;
         let showStats = false;
         
+        // Determinar a mensagem de "próxima fase"
         if (this.gameState.currentSubPhase === 'A') {
             // Se estamos na subfase A, próxima é B da mesma fase
-            nextPhaseText = `${this.gameState.currentPhase}B`;
+            nextPhaseText = `tabuada do ${this.gameState.currentPhase} (parte B)`;
         } else {
             // Se estamos na subfase B, próxima é A da próxima fase
-            nextPhaseText = `${this.gameState.currentPhase + 1}A`;
+            nextPhaseText = `tabuada do ${this.gameState.currentPhase + 1} (parte A)`;
             showStats = true; // Mostrar estatísticas apenas ao completar a fase inteira
+        }
+
+        // Se a fase atual é a 9 e a subfase é B, então a próxima fase é a final
+        if (this.gameState.currentPhase == 9 && this.gameState.currentSubPhase == 'B') {
+            nextPhaseText = `<span id="nextPhase">Fase Final</span> (parte A)`;
+        }
+
+        // Se a fase atual é a 10 e a subfase é A, então a próxima fase é a final
+        if (this.gameState.currentPhase == 10 && this.gameState.currentSubPhase == 'A') {
+            nextPhaseText = `<span id="nextPhase">Fase Final</span> (parte B)`;
         }
 
         // Atualizar o modal com as mensagens corretas
         const modal = document.getElementById('nextPhaseModal');
         const modalContent = modal.querySelector('.modal-content');
-        
-        // Limpar conteúdo anterior
-        modalContent.innerHTML = `
+
+        // Montar string da mensagem de parabéns:
+        var congratsMessage = `
             <h2>Parabéns! <i class="fas fa-star"></i></h2>
-            <p>Você dominou a tabuada do <span id="currentPhase">${currentPhaseText}</span>!</p>
+            <p>Você dominou a ${currentPhaseText}</p>
             ${this.gameState.lives < this.gameState.MAX_LIVES ? `
                 <div class="bonus-life">
                     <i class="fas fa-heart"></i>
@@ -855,11 +959,14 @@ class GameController {
                     </div>
                 </div>
             ` : ''}
-            <p>Próxima fase: Tabuada do <span id="nextPhase">${nextPhaseText}</span></p>
+            <p>Próxima fase: <span id="nextPhase">${nextPhaseText}</span></p>
             <button id="startNextPhase" class="next-phase-btn">
                 Continuar <i class="fas fa-arrow-right"></i>
             </button>
         `;
+        
+        // Atualizar o modal com a mensagem de parabéns
+        modalContent.innerHTML = congratsMessage;
 
         // Depois atualizar o estado do jogo
         if (this.gameState.currentSubPhase === 'A') {
@@ -1434,7 +1541,16 @@ class GameController {
                 }
 
                 // Atualizar o conteúdo
-                if (phaseNumber === this.gameState.currentPhase) {
+                if (phaseNumber === 10) {
+                    // Fase especial - mostrar estrela
+                    if (phaseNumber === this.gameState.currentPhase) {
+                        phase.innerHTML = `<i class="fas fa-crown"></i><span>★${this.gameState.currentSubPhase}</span>`;
+                    } else if (progress === 'complete') {
+                        phase.innerHTML = `<i class="fas fa-crown"></i><span>★</span>`;
+                    } else {
+                        phase.innerHTML = `<i class="fas fa-crown"></i><span>★</span>`;
+                    }
+                } else if (phaseNumber === this.gameState.currentPhase) {
                     phase.innerHTML = `<i class="fas fa-calculator"></i><span>${phaseNumber}${this.gameState.currentSubPhase}</span>`;
                 } else if (progress === 'complete') {
                     phase.innerHTML = `<i class="fas fa-check"></i><span>${phaseNumber}</span>`;
@@ -1443,7 +1559,11 @@ class GameController {
                 }
             } else {
                 phase.classList.add('locked');
-                phase.innerHTML = `<i class="fas fa-lock"></i><span>${phaseNumber}</span>`;
+                if (phaseNumber === 10) {
+                    phase.innerHTML = `<i class="fas fa-lock"></i><span>★</span>`;
+                } else {
+                    phase.innerHTML = `<i class="fas fa-lock"></i><span>${phaseNumber}</span>`;
+                }
             }
         });
     }
@@ -1514,6 +1634,69 @@ class GameController {
                 decay: 0.95
             });
         }, 300); // Intervalo entre explosões
+    }
+
+    celebrateGameCompletion() {
+        const myCanvas = document.createElement('canvas');
+        myCanvas.style.position = 'fixed';
+        myCanvas.style.top = '0';
+        myCanvas.style.left = '0';
+        myCanvas.style.width = '100%';
+        myCanvas.style.height = '100%';
+        myCanvas.style.pointerEvents = 'none';
+        myCanvas.style.zIndex = '999';
+        document.body.appendChild(myCanvas);
+
+        const myConfetti = confetti.create(myCanvas, {
+            resize: true,
+            useWorker: true
+        });
+
+        // Função para criar explosões douradas
+        const createGoldenExplosion = (config) => {
+            myConfetti({
+                ...config,
+                colors: ['#FFD700', '#FFA500', '#DAA520', '#FFD700'],
+                gravity: 0.5,
+                shapes: ['star', 'circle']
+            });
+        };
+
+        // Explosão inicial mais intensa
+        createGoldenExplosion({
+            particleCount: 300,
+            spread: 180,
+            origin: { y: 0.6 },
+            scalar: 1.5,
+            ticks: 400
+        });
+
+        // Série de explosões menores
+        let count = 0;
+        const interval = setInterval(() => {
+            count++;
+            if (count >= 8) {
+                clearInterval(interval);
+                setTimeout(() => {
+                    if (myCanvas.parentNode === document.body) {
+                        document.body.removeChild(myCanvas);
+                    }
+                }, 6000);
+                return;
+            }
+
+            // Explosões douradas em posições aleatórias
+            createGoldenExplosion({
+                particleCount: 50,
+                spread: 90,
+                origin: {
+                    x: Math.random(),
+                    y: Math.random() - 0.2
+                },
+                scalar: 1.2,
+                ticks: 300
+            });
+        }, 400);
     }
 }
 

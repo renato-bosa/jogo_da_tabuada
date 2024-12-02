@@ -1124,3 +1124,38 @@ button:hover {
 .no-margin-bottom {
     margin-bottom: 0 !important;
 }
+
+.phase[data-phase="10"] {
+    background: linear-gradient(45deg, #FFD700, #DAA520);
+    border: 3px solid #FFD700;
+}
+
+.phase[data-phase="10"] span {
+    font-size: 1.4em;
+    color: #fff;
+    text-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+
+.phase[data-phase="10"].locked {
+    background: linear-gradient(45deg, #95a5a6, #7f8c8d);
+    border: 3px solid #bdc3c7;
+}
+
+.phase[data-phase="10"].complete {
+    background: linear-gradient(45deg, #FFD700, #FFA500);
+    border: 3px solid #FFD700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+.phase[data-phase="10"]:not(.locked):hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.7);
+}
+
+#currentPhase {
+    font-weight: bold;
+}
+
+#nextPhase {
+    font-weight: bold;
+}
