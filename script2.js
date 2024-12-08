@@ -16,7 +16,8 @@ class GameState {
             timerInterval: null,
             attemptsHistory: [],
             currentSubPhase: 'A', // 'A' ou 'B'
-            currentQuestions: {} // Mover questions para aqui
+            currentQuestions: {}, // Mover questions para aqui
+            phaseStats: this.initializePhaseStats() // Inicializar estatísticas das fases
         };
 
         // Configurações globais
@@ -38,21 +39,30 @@ class GameState {
             }
         };
 
-        // Estatísticas da fase
-        this.phaseStats = {
-            errors: 0,
-            corrects: 0,
-            totalTime: 0,
-            startTime: null
-        };
-
         // Armazenamento de todas as partidas
         this.savedGames = {};
 
         // Carregar jogos salvos ao inicializar
         this.loadSavedGames();
     }
-    
+
+    // Método para inicializar as estatísticas das fases
+    initializePhaseStats() {
+        const phaseStats = {};
+        for (let phase = 1; phase <= 10; phase++) {
+            for (let subPhase = 'A'; subPhase <= 'B'; subPhase = String.fromCharCode(subPhase.charCodeAt(0) + 1)) {
+                phaseStats[`${phase}${subPhase}`] = {
+                    completed: false,
+                    errors: 0,
+                    corrects: 0,
+                    totalTime: 0,
+                    completionDate: null
+                };
+            }
+        }
+        return phaseStats;
+    }
+
     // Método para obter todos os atributos da classe como JSON
     dumpState() {
         const state = {};
@@ -1088,9 +1098,12 @@ class GameController {
             this.gameState.resetPhaseStats();
             this.gameState.currentGameState.currentPhase++;
             this.gameState.currentGameState.currentSubPhase = 'A';
-            if (this.gameState.currentGameState.highestPhase < this.gameState.currentGameState.highestPhase) {
-                this.gameState.currentGameState.highestPhase = this.gameState.currentGameState.highestPhase;
+
+            // Garante que highestPhase seja atualizado com o novo progresso
+            if (this.gameState.currentGameState.highestPhase < this.gameState.currentGameState.currentPhase) {
+                this.gameState.currentGameState.highestPhase = this.gameState.currentGameState.currentPhase;
             }
+            
             this.gameState.initializePhaseQuestions();
         }
 
