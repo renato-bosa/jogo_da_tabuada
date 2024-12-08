@@ -160,19 +160,26 @@ class GameState {
         this.currentGameState.lives = this.globalConfigs.MAX_LIVES;
         this.currentGameState.attemptsHistory = [];
         this.currentGameState.currentQuestions = {};
-        this.phaseStats = {
-            errors: 0,
-            corrects: 0,
-            totalTime: 0,
-            startTime: Date.now()
-        };
-        
+        this.currentGameState.phaseStats = this.initializePhaseStats(); // Resetar estatísticas das fases
+
         // Limpar localStorage
         localStorage.removeItem('currentPhase');
         localStorage.removeItem('highestPhase');
         localStorage.removeItem('score');
         localStorage.removeItem('lives');
         localStorage.removeItem('questions');
+
+        // Resetar as cores das fases no mapa de progresso
+        this.resetPhaseColors();
+    }
+
+    // Método para resetar as cores das fases no mapa de progresso
+    resetPhaseColors() {
+        const phases = document.querySelectorAll('.phase');
+        phases.forEach(phase => {
+            phase.classList.remove('half-complete', 'complete', 'locked');
+            phase.innerHTML = `<i class="fas fa-lock"></i><span>${phase.dataset.phase}</span>`; // Resetar para o estado bloqueado
+        });
     }
 
     saveCurrentGame() {
