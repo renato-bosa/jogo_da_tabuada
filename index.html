@@ -62,17 +62,25 @@
         </div>
         
         <div id="game">
-            <div class="game-info">
-                <div id="lives">
-                    <span class="lives-label">Vidas:</span>
-                    <span class="hearts-container">
-                        <i class="fas fa-heart"></i>
-                        <i class="fas fa-heart"></i>
-                        <i class="fas fa-heart"></i>
-                        <i class="fas fa-heart"></i>
-                    </span>
+            <div class="player-header">
+                <span class="player-name"><i class="fas fa-user"></i> <span id="playerNameDisplay"></span></span>
+
+                <div class="game-info">
+                    <div id="lives">
+                        <span class="lives-label">Vidas:</span>
+                        <span class="hearts-container">
+                            <i class="fas fa-heart"></i>
+                            <i class="fas fa-heart"></i>
+                            <i class="fas fa-heart"></i>
+                            <i class="fas fa-heart"></i>
+                        </span>
+                    </div>
+                    <div id="score">
+                        <i class="fas fa-coins"></i>
+                        Pontos: <span id="scoreValue">0</span>
+                    </div>
                 </div>
-                <div id="score">Pontos: <span id="scoreValue">0</span></div>
+                
             </div>
             <div id="timer">30</div>
             <div id="question"></div>
@@ -108,7 +116,7 @@
         </div>
     </div>
 
-    <!-- Atualizar o modal de configurações para nova partida -->
+    <!-- Atualizar o modal de configurações -->
     <div id="configModal" class="modal">
         <div class="modal-content">
             <button id="backToMenu" class="back-to-menu-btn">
@@ -116,8 +124,11 @@
             </button>
             <h2><i class="fas fa-plus"></i> Nova Partida</h2>
             <div class="config-option">
-                <label for="playerName">Nome do Jogador:</label>
+                <label for="newGamePlayerName">Nome do Jogador:</label>
                 <input type="text" id="newGamePlayerName" maxlength="20" placeholder="Digite seu nome">
+                <div class="emoji-picker" id="emojiPicker">
+                    <!-- Emojis serão inseridos aqui via JavaScript -->
+                </div>
             </div>
             <button id="toggleAdvanced" class="toggle-advanced-btn" title="Opções Avançadas">
                 <i class="fas fa-cog"></i>
@@ -144,6 +155,16 @@
                 <i class="fas fa-play"></i> Iniciar Jogo
             </button>
             <button id="closeModal" class="close-btn" style="display: none;">&times;</button>
+        </div>
+    </div>
+
+    <!-- Modal de Estatísticas de Fase Concluída -->
+    <div id="statsModal" class="modal">
+        <div class="modal-content">
+            <h2>Estatísticas da Fase <span id="statsPhase"></span></h2>
+            <div id="statsDetails"></div>
+            <button id="replayPhase">Jogar Novamente</button>
+            <button id="closeStats">Fechar</button>
         </div>
     </div>
 

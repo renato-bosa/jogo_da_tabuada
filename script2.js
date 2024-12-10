@@ -56,7 +56,11 @@ class GameState {
                     errors: 0,
                     corrects: 0,
                     totalTime: 0,
-                    completionDate: null
+                    bestTime: null,
+                    completionDate: null,
+                    attempts: 0,
+                    accuracy: 0,
+                    startTime: Date.now()
                 };
             }
         }
@@ -81,6 +85,10 @@ class GameState {
     }
 
     // Métodos para gerenciar o estado
+
+    getPhaseStats() { return this.currentGameState.phaseStats; }
+    setPhaseStats(phase, subphase, object) { this.currentGameState.phaseStats[`${phase}${subphase}`] = object; }
+
     getIsPaused() { return this.currentGameState.isPaused; }
     setIsPaused(value) { this.currentGameState.isPaused = value; }
     
@@ -145,6 +153,7 @@ class GameState {
         this.globalConfigs.currentDifficulty = game.currentDifficulty;
         this.currentGameState.currentQuestions = { ...game.questions };
         this.currentGameState.attemptsHistory = [];
+        this.currentGameState.phaseStats = game.phaseStats ? { ...game.phaseStats } : this.initializePhaseStats(); // Carregar phaseStats
         
         return true;
     }
@@ -199,7 +208,8 @@ class GameState {
             score: this.currentGameState.score,
             lives: this.currentGameState.lives,
             currentDifficulty: this.globalConfigs.currentDifficulty,
-            questions: { ...this.currentGameState.currentQuestions }
+            questions: { ...this.currentGameState.currentQuestions },
+            phaseStats: { ...this.currentGameState.phaseStats } // Adicionar phaseStats
         };
         
         localStorage.setItem('savedGames', JSON.stringify(this.savedGames));
@@ -233,13 +243,11 @@ class GameState {
 
     initializePhaseQuestions() {
         console.log('Inicializando questões para fase:', this.currentGameState.currentPhase, this.currentGameState.currentSubPhase);
-        this.currentGameState.currentQuestions = {}; // Atualizar para usar currentQuestions
-        this.phaseStats = {
-            errors: 0,
-            corrects: 0,
-            totalTime: 0,
-            startTime: Date.now()
-        };
+        this.currentGameState.currentQuestions = {};
+        
+        // Inicializar estatísticas da subfase atual
+        const currentPhaseKey = `${this.currentGameState.currentPhase}${this.currentGameState.currentSubPhase}`;
+        this.currentGameState.phaseStats[currentPhaseKey].startTime = Date.now();
         
         if (this.currentGameState.currentPhase === 10) {
             // Fase especial - sortear questões aleatórias
@@ -331,31 +339,100 @@ class GameState {
         return complete;
     }
 
-    accumulatePhaseStats() {
-        // Guardar estatísticas acumuladas ao passar da subfase A para B
-        if (!this.accumulatedStats) {
-            this.accumulatedStats = {
+    // Adicionar método para processar estatísticas durante o jogo
+    updatePhaseStats(isCorrect) {
+        const currentPhaseKey = `${this.currentGameState.currentPhase}${this.currentGameState.currentSubPhase}`;
+        
+        // Verificar se existe estatística para esta fase/subfase
+        if (!this.currentGameState.phaseStats[currentPhaseKey]) {
+            this.currentGameState.phaseStats[currentPhaseKey] = {
+                completed: false,
                 errors: 0,
                 corrects: 0,
                 totalTime: 0,
-                startTime: this.phaseStats.startTime
+                bestTime: null,
+                completionDate: null,
+                attempts: 0,
+                accuracy: 0,
+                startTime: Date.now()
             };
         }
         
-        // Acumular estatísticas atuais
-        this.accumulatedStats.errors += this.phaseStats.errors;
-        this.accumulatedStats.corrects += this.phaseStats.corrects;
-        this.accumulatedStats.totalTime += Date.now() - this.phaseStats.startTime;
+        const stats = this.currentGameState.phaseStats[currentPhaseKey];
+        
+        // Garantir que as propriedades existam
+        if (!stats.attempts) stats.attempts = 0;
+        if (!stats.corrects) stats.corrects = 0;
+        if (!stats.errors) stats.errors = 0;
+        if (!stats.totalTime) stats.totalTime = 0;
+        if (!stats.startTime) stats.startTime = Date.now();
+        
+        // Atualizar contadores básicos
+        stats.attempts++;
+        if (isCorrect) {
+            stats.corrects++;
+        } else {
+            stats.errors++;
+        }
+        
+        // Calcular acurácia
+        stats.accuracy = (stats.corrects / stats.attempts) * 100;
+        
+        // Atualizar tempo total e melhor tempo
+        const currentTime = Date.now();
+        const timeSpent = currentTime - stats.startTime;
+        stats.totalTime += timeSpent;
+        
+        // Atualizar melhor tempo se for uma resposta correta
+        if (isCorrect && (!stats.bestTime || timeSpent < stats.bestTime)) {
+            stats.bestTime = timeSpent;
+        }
+        
+        // Resetar tempo inicial para próxima questão
+        stats.startTime = Date.now();
     }
 
-    resetPhaseStats() {
-        this.phaseStats = {
-            errors: 0,
-            corrects: 0,
-            totalTime: 0,
-            startTime: Date.now()
+    // Atualizar método para finalizar estatísticas da subfase
+    completePhaseStats() {
+        const currentPhaseKey = `${this.currentGameState.currentPhase}${this.currentGameState.currentSubPhase}`;
+        const stats = this.currentGameState.phaseStats[currentPhaseKey];
+        
+        // Garantir que todas as propriedades existam
+        if (!stats) {
+            console.error('Estatísticas não encontradas para:', currentPhaseKey);
+            return;
+        }
+        
+        // Atualizar status de conclusão
+        stats.completed = true;
+        stats.completionDate = new Date().toISOString();
+        
+        console.log('Estatísticas finalizadas para', currentPhaseKey, ':', stats);
+        
+        // Salvar estatísticas no localStorage
+        this.savePhaseStats();
+    }
+
+    // Método para combinar estatísticas das subfases para exibição
+    getCombinedPhaseStats(phase) {
+        const statsA = this.currentGameState.phaseStats[`${phase}A`];
+        const statsB = this.currentGameState.phaseStats[`${phase}B`];
+        
+        return {
+            errors: statsA.errors + statsB.errors,
+            corrects: statsA.corrects + statsB.corrects,
+            totalTime: statsA.totalTime + statsB.totalTime,
+            attempts: statsA.attempts + statsB.attempts,
+            accuracy: ((statsA.corrects + statsB.corrects) / (statsA.attempts + statsB.attempts)) * 100 || 0,
+            bestTime: Math.min(
+                statsA.bestTime || Number.MAX_VALUE,
+                statsB.bestTime || Number.MAX_VALUE
+            ) === Number.MAX_VALUE ? null : Math.min(
+                statsA.bestTime || Number.MAX_VALUE,
+                statsB.bestTime || Number.MAX_VALUE
+            ),
+            completionDate: statsB.completionDate // Data de conclusão da fase inteira
         };
-        this.accumulatedStats = null; // Limpar estatísticas acumuladas
     }
 
     // Método para incrementar a pontuação
@@ -388,6 +465,80 @@ class GameState {
     // Método para resetar vidas
     resetLives() {
         this.currentGameState.lives = this.globalConfigs.MAX_LIVES;
+    }
+
+    // Adicionar método para salvar estatísticas
+    savePhaseStats() {
+        localStorage.setItem('phaseStats', JSON.stringify(this.currentGameState.phaseStats));
+    }
+
+    // Adicionar método para carregar estatísticas
+    loadPhaseStats() {
+        const savedStats = localStorage.getItem('phaseStats');
+        if (savedStats) {
+            this.currentGameState.phaseStats = JSON.parse(savedStats);
+        }
+    }
+
+    // Atualizar o método handleCorrectAnswer para usar as novas funções
+    handleCorrectAnswer() {
+        console.log('=== Resposta Correta ===');
+        this.playSound('correctSound');
+        this.gameState.incrementScore(10);
+        
+        // Atualizar estatísticas da subfase atual
+        this.gameState.updatePhaseStats(true);
+        
+        // Atualizar nível de domínio da questão atual
+        const key = `${this.currentGameState.currentQuestion.num1}x${this.currentGameState.currentQuestion.num2}`;
+        if (this.currentGameState.currentQuestions[key].masteryLevel < 2) {
+            this.currentGameState.currentQuestions[key].masteryLevel++;
+        }
+        
+        console.log('Novo estado das questões:', this.currentGameState.currentQuestions);
+        
+        this.updateHistory(true);
+        this.animateScoreElement();
+        
+        // Verificar se completou a subfase
+        if (this.isSubPhaseComplete()) {
+            console.log('Subfase completada!');
+            
+            // Marcar a subfase atual como completa antes de mostrar o modal
+            this.completePhaseStats();
+            
+            // Mostrar o modal com as estatísticas atualizadas
+            this.showNextPhaseModal();
+        }
+        
+        this.saveCurrentGame();
+    }
+
+    // Atualizar o método handleWrongAnswer
+    handleWrongAnswer() {
+        console.log('Iniciando handleWrongAnswer');
+        this.playSound('wrongSound');
+        
+        // Atualizar estatísticas
+        this.updatePhaseStats(false);
+        
+        const key = `${this.currentGameState.currentQuestion.num1}x${this.currentGameState.currentQuestion.num2}`;
+        this.currentGameState.currentQuestions[key].masteryLevel = 0;
+        
+        console.log('Pausando o jogo');
+        this.gameState.setIsPaused(true);
+        document.getElementById('game').classList.add('game-paused');
+        
+        console.log('Mostrando modal de resposta errada');
+        this.showWrongAnswerModal();
+        // this.gameState.decrementLives();
+        this.loseLife();
+        this.updateHistory(false);
+        
+        // Salvar após resposta errada
+        this.gameState.saveCurrentGame();
+        
+        console.log('handleWrongAnswer finalizado');
     }
 }
 
@@ -612,7 +763,10 @@ class GameController {
         console.log('=== Resposta Correta ===');
         this.playSound('correctSound');
         this.gameState.incrementScore(10);
-        this.gameState.phaseStats.corrects++;
+
+        // Atualizar estatísticas da subfase atual
+        // (usamos o método updatePhaseStats com o parâmetro true para indicar que a resposta é correta.)
+        this.gameState.updatePhaseStats(true);
         
         const key = `${this.gameState.currentGameState.currentQuestion.num1}x${this.gameState.currentGameState.currentQuestion.num2}`;
         if (this.gameState.currentGameState.currentQuestions[key].masteryLevel < 2) {
@@ -624,9 +778,24 @@ class GameController {
         this.updateHistory(true);
         this.animateScoreElement();
         
+        // Verificar se completou a subfase
         if (this.gameState.isSubPhaseComplete()) {
             console.log('Subfase completada!');
+            
+            // Marcar a subfase atual como completa antes de mostrar o modal
+            this.gameState.completePhaseStats();
+            
+            // Mostrar o modal com as estatísticas atualizadas
             this.showNextPhaseModal();
+
+            // Salvar as estatísticas atuais no estado do jogo
+            // Acho que não é mais necessário, mas deixei aqui para referência futura.
+            /*
+            var fase_atual = this.gameState.currentGameState.currentPhase;
+            var subfase_atual = this.gameState.currentGameState.currentSubPhase;
+            var estatisticas_acumuladas = this.gameState.accumulatedStats;
+            this.gameState.setPhaseStats(fase_atual, subfase_atual, estatisticas_acumuladas);
+            */
         }
         
         this.gameState.saveCurrentGame();
@@ -635,7 +804,10 @@ class GameController {
     handleWrongAnswer() {
         console.log('Iniciando handleWrongAnswer');
         this.playSound('wrongSound');
-        this.gameState.phaseStats.errors++;
+
+        // Atualizar estatísticas
+        // (usamos o método updatePhaseStats com o parâmetro false para indicar que a resposta é errada.)
+        this.gameState.updatePhaseStats(false);
         
         const key = `${this.gameState.currentGameState.currentQuestion.num1}x${this.gameState.currentGameState.currentQuestion.num2}`;
         this.gameState.currentGameState.currentQuestions[key].masteryLevel = 0;
@@ -896,13 +1068,13 @@ class GameController {
         
         // Verificar se completou a fase 10B (Zerou o jogo)
         if (this.gameState.currentGameState.currentPhase === 10 && this.gameState.currentGameState.currentSubPhase === 'B' && this.gameState.isSubPhaseComplete()) {
+
+            // Obter estatísticas combinadas da fase 10
+            const stats = this.gameState.getCombinedPhaseStats(10);
+            
             // Mostrar modal especial de conclusão do jogo
             const modal = document.getElementById('nextPhaseModal');
             const modalContent = modal.querySelector('.modal-content');
-            
-            // Acumular estatísticas finais
-            this.gameState.accumulatePhaseStats();
-            const stats = this.gameState.accumulatedStats;
             
             modalContent.innerHTML = `
                 <h2><i class="fas fa-crown"></i> Parabéns!</h2>
@@ -918,7 +1090,7 @@ class GameController {
                     </div>
                     <div class="stat-item">
                         <i class="fas fa-percentage"></i>
-                        <span>Taxa de Acerto: ${Math.round((stats.corrects / (stats.corrects + stats.errors)) * 100)}%</span>
+                        <span>Taxa de Acerto: ${Math.round(stats.accuracy)}%</span>
                     </div>
                     <div class="stat-item">
                         <i class="fas fa-clock"></i>
@@ -1034,8 +1206,12 @@ class GameController {
         // Depois atualizar o estado do jogo
         if (this.gameState.currentGameState.currentSubPhase === 'A') {
             console.log('Avançando para subfase B');
+
             // Acumular estatísticas da subfase A
-            this.gameState.accumulatePhaseStats();
+            // this.gameState.accumulatePhaseStats();
+            // Agora não acumulamos estatísticas, armazenamos separadamente para cada subfase.
+
+            // Atualizar a subfase para B
             this.gameState.currentGameState.currentSubPhase = 'B';
             
             // Ganhar vida ao completar subfase A
@@ -1053,16 +1229,14 @@ class GameController {
             this.gameState.initializePhaseQuestions();
         } else {
             console.log('Completou fase inteira, avançando para próxima fase');
-            // Acumular estatísticas da subfase B antes de mostrar
-            this.gameState.accumulatePhaseStats();
             
             // Ganhar vida ao completar a fase inteira
             if (this.gameState.currentGameState.lives < this.gameState.globalConfigs.MAX_LIVES) {
                 this.gainLife();
             }
             
-            // Usar estatísticas acumuladas no template
-            const stats = this.gameState.accumulatedStats;
+            // Usar estatísticas combinadas das subfases A e B
+            const stats = this.gameState.getCombinedPhaseStats(this.gameState.currentGameState.currentPhase);
             modalContent.innerHTML = `
                 <h2>Parabéns! <i class="fas fa-star"></i></h2>
                 <p>Você dominou a tabuada do <span id="currentPhase">${this.gameState.currentGameState.currentPhase}</span>!</p>
@@ -1084,7 +1258,7 @@ class GameController {
                         </div>
                         <div class="stat-item">
                             <i class="fas fa-percentage"></i>
-                            <span>Taxa de Acerto: ${Math.round((stats.corrects / (stats.corrects + stats.errors)) * 100)}%</span>
+                            <span>Taxa de Acerto: ${Math.round(stats.accuracy)}%</span>
                         </div>
                         <div class="stat-item">
                             <i class="fas fa-clock"></i>
@@ -1102,7 +1276,6 @@ class GameController {
             setTimeout(() => this.celebrateCompletion(), 50);
             
             // Resetar estatísticas para a próxima fase
-            this.gameState.resetPhaseStats();
             this.gameState.currentGameState.currentPhase++;
             this.gameState.currentGameState.currentSubPhase = 'A';
 
@@ -1160,6 +1333,98 @@ class GameController {
         this.gameState.saveCurrentGame();
     }
 
+    directPhaseClick(phaseNumber) {
+        // Verificar se a fase já foi concluída (Usando 'B' para testar sempre pela fase completa)
+        const phaseStats = this.gameState.currentGameState.phaseStats[`${phaseNumber}B`];
+
+        console.log('Avaliando conclusão da fase ' + phaseNumber + ':');
+        console.log('phaseStats:', phaseStats);
+
+        if (phaseStats && phaseStats.completed) {
+            console.log('Fase completa, iniciando modal de estatísticas.');
+            this.showStatsModal(phaseStats, phaseNumber);
+        } else {
+            console.log('Fase clicada não está concluída, iniciando fase.');
+            // Caso a fase ainda não tenha sido completada inicia a fase imediatamente
+            this.changePhase(phaseNumber);
+        }
+    }
+
+    showStatsModal(phaseStats, phase) {
+        // Pausar o jogo
+        this.gameState.setIsPaused(true);
+        document.getElementById('game').classList.add('game-paused');
+
+        // Guardar a fase atual para restaurar depois
+        const currentPhase = this.gameState.currentGameState.currentPhase;
+        
+        // Mudar temporariamente o background para a fase selecionada
+        document.body.style.background = `url('${this.backgroundImages[phase]}') no-repeat center center fixed`;
+        document.body.style.backgroundSize = 'cover';
+
+        const modal = document.getElementById('statsModal');
+        const stats = this.gameState.getCombinedPhaseStats(phase);
+        
+        document.getElementById('statsPhase').textContent = phase;
+        document.getElementById('statsDetails').innerHTML = `
+            <div class="phase-stats">
+                <div class="stat-item accuracy-stat">
+                    <div class="accuracy-header">
+                        <i class="fas fa-percentage"></i>
+                        <span>Taxa de Acerto: ${Math.round(stats.accuracy)}%</span>
+                    </div>
+                    <div class="accuracy-bar">
+                        <div class="accuracy-progress" style="width: ${Math.round(stats.accuracy)}%"></div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-check"></i>
+                    <span>Acertos: ${stats.corrects}</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-times"></i>
+                    <span>Erros: ${stats.errors}</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-clock"></i>
+                    <span>Tempo Total: ${Math.round(stats.totalTime / 1000)}s</span>
+                </div>
+                ${stats.completionDate ? `
+                    <div class="stat-item">
+                        <i class="fas fa-calendar"></i>
+                        <span>Concluído em: ${new Date(stats.completionDate).toLocaleDateString()}</span>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        modal.style.display = 'block';
+
+        // Configurar os event listeners dos botões
+        document.getElementById('replayPhase').onclick = () => {
+            // Avisa usuário que se ele continuar, perderá a pontuação atual
+            if (confirm('Ao rejogar a fase, você perderá as estatísticas atuais. Deseja continuar?')) {
+                modal.style.display = 'none';
+                this.changePhase(phase);
+                // Despausar o jogo ao iniciar a fase
+                this.gameState.setIsPaused(false);
+                document.getElementById('game').classList.remove('game-paused');
+                // Não precisa restaurar o background aqui pois changePhase já atualiza
+            }
+        };
+        
+        document.getElementById('closeStats').onclick = () => {
+            modal.style.display = 'none';
+            // Despausar o jogo ao fechar o modal
+            this.gameState.setIsPaused(false);
+            document.getElementById('game').classList.remove('game-paused');
+            // Restaurar o background para a fase atual
+            document.body.style.background = `url('${this.backgroundImages[currentPhase]}') no-repeat center center fixed`;
+            document.body.style.backgroundSize = 'cover';
+        };
+    }
+    
+
     initializeGameOverListeners() {
         document.getElementById('restartGame').addEventListener('click', () => {
             document.getElementById('gameOverModal').style.display = 'none';
@@ -1171,19 +1436,50 @@ class GameController {
         document.querySelectorAll('.phase').forEach(phase => {
             phase.addEventListener('click', () => {
                 const phaseNumber = parseInt(phase.dataset.phase);
-                this.changePhase(phaseNumber);
+                this.directPhaseClick(phaseNumber);
             });
         });
     }
 
     changePhase(newPhase) {
+        // Caso a fase já esteja liberada...
         if (newPhase >= 2 && newPhase <= this.gameState.currentGameState.highestPhase) {
             this.gameState.currentGameState.currentPhase = newPhase;
+            this.gameState.currentGameState.currentSubPhase = 'A'; // Sempre começar pela subfase A
+            
+            // Reinicializar estatísticas da fase
+            this.gameState.currentGameState.phaseStats[`${newPhase}A`] = {
+                completed: false,
+                errors: 0,
+                corrects: 0,
+                totalTime: 0,
+                bestTime: null,
+                completionDate: null,
+                attempts: 0,
+                accuracy: 0,
+                startTime: Date.now()
+            };
+            
+            this.gameState.currentGameState.phaseStats[`${newPhase}B`] = {
+                completed: false,
+                errors: 0,
+                corrects: 0,
+                totalTime: 0,
+                bestTime: null,
+                completionDate: null,
+                attempts: 0,
+                accuracy: 0,
+                startTime: Date.now()
+            };
+
             localStorage.setItem('currentPhase', this.gameState.currentGameState.currentPhase);
             this.gameState.initializePhaseQuestions();
             this.updateProgressBar();
             this.generateQuestion();
             this.updateBackground();
+            
+            // Salvar o estado atualizado
+            this.gameState.saveCurrentGame();
         }
     }
 
@@ -1393,6 +1689,46 @@ class GameController {
         
         modal.style.display = 'block';
         document.getElementById('newGamePlayerName').focus();
+        
+        // Inicializar o seletor de emoji
+        const emojiPicker = document.getElementById('emojiPicker');
+        const commonEmojis = [
+            '🎮', '🎯', '🧮', '🔢', '🎲',
+            '🌟', '🚀', '🎓', '🧠', '💡',
+            '⭐', '🏆', '💪', '🎨', '😜',
+            '😎', '😃', '👽', '👾', '🤖',
+            '🤯', '🤠', '🤪', '🤭', '😉',
+            '⚽', '🏀', '🏈', '🏉', '🏐',
+            '🎸', '🎹', '🥁'
+        ];
+        
+        emojiPicker.innerHTML = commonEmojis.map(emoji => `
+            <span class="emoji-option" role="button" tabindex="0">${emoji}</span>
+        `).join('');
+        
+        // Adicionar listeners para os emojis
+        document.querySelectorAll('.emoji-option').forEach(option => {
+            option.addEventListener('click', () => {
+                const input = document.getElementById('newGamePlayerName');
+                const cursorPos = input.selectionStart;
+                const textBefore = input.value.substring(0, cursorPos);
+                const textAfter = input.value.substring(cursorPos);
+                
+                input.value = textBefore + option.textContent + textAfter;
+                input.focus();
+                // Posicionar o cursor após o emoji
+                const newPos = cursorPos + option.textContent.length;
+                input.setSelectionRange(newPos, newPos);
+            });
+            
+            // Permitir seleção por teclado também
+            option.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    option.click();
+                }
+            });
+        });
     }
 
     saveConfig() {
@@ -1425,6 +1761,9 @@ class GameController {
         
         document.getElementById('configModal').style.display = 'none';
         this.pauseGame(this.gameState.globalConfigs.PAUSE_TYPES.INITIAL);
+        
+        // Atualizar o nome do jogador na interface
+        document.getElementById('playerNameDisplay').textContent = playerName;
     }
 
     updateDisplay() {
@@ -1556,6 +1895,9 @@ class GameController {
 
     loadSavedGame(gameId) {
         if (this.gameState.loadGame(gameId)) {
+            // Atualizar o nome do jogador na interface
+            document.getElementById('playerNameDisplay').textContent = this.gameState.currentGameState.playerName;
+            
             this.updateDisplay();
             this.updateProgressBar();
             this.generateQuestion();
