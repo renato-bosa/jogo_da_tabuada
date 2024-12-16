@@ -2117,6 +2117,7 @@ class GameController {
             // Usar o background padrão do jogo (gradiente azul)
             // document.body.style.background = 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)';
             document.body.style.background = `url('img/Numi.webp') no-repeat center center fixed`;
+            document.body.style.backgroundSize = 'cover';
         } else {
             document.body.style.background = `url('${this.backgroundImages[phase]}') no-repeat center center fixed`;
             document.body.style.backgroundSize = 'cover';
