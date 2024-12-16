@@ -805,7 +805,7 @@ class GameController {
         console.log('Iniciando handleWrongAnswer');
         this.playSound('wrongSound');
 
-        // Atualizar estatísticas
+        // Atualizar estat������sticas
         // (usamos o método updatePhaseStats com o parâmetro false para indicar que a resposta é errada.)
         this.gameState.updatePhaseStats(false);
         
@@ -1342,7 +1342,8 @@ class GameController {
 
         if (phaseStats && phaseStats.completed) {
             console.log('Fase completa, iniciando modal de estatísticas.');
-            this.showStatsModal(phaseStats, phaseNumber);
+            // this.showStatsModal(phaseStats, phaseNumber);
+            this.showPhaseHistory(phaseNumber);
         } else {
             console.log('Fase clicada não está concluída, iniciando fase.');
             // Caso a fase ainda não tenha sido completada inicia a fase imediatamente
@@ -1760,7 +1761,9 @@ class GameController {
         this.updateBackground();
         
         document.getElementById('configModal').style.display = 'none';
-        this.pauseGame(this.gameState.globalConfigs.PAUSE_TYPES.INITIAL);
+        
+        // Ao invés de mostrar o modal de pausa, mostrar o modal de história na posição inicial
+        this.showPhaseHistory(0);
         
         // Atualizar o nome do jogador na interface
         document.getElementById('playerNameDisplay').textContent = playerName;
@@ -2105,6 +2108,309 @@ class GameController {
                 ticks: 300
             });
         }, 400);
+    }
+
+    showPhaseHistory(phase) {
+        // Pausar o jogo
+        this.gameState.setIsPaused(true);
+        document.getElementById('game').classList.add('game-paused');
+
+        // Guardar a fase atual para restaurar depois
+        const currentPhase = this.gameState.currentGameState.currentPhase;
+        
+        // Mudar temporariamente o background
+        if (phase === 0) {
+            // Usar o background padrão do jogo (gradiente azul)
+            // document.body.style.background = 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)';
+            document.body.style.background = `url('img/Numi.webp') no-repeat center center fixed`;
+        } else {
+            document.body.style.background = `url('${this.backgroundImages[phase]}') no-repeat center center fixed`;
+            document.body.style.backgroundSize = 'cover';
+        }
+
+        const modal = document.getElementById('phaseHistoryModal');
+        
+        // Atualizar título e subtítulo
+        document.getElementById('statsPhase').textContent = phase === 0 ? 'Ajude Numi a derrotar Ignórius!' : `Fase ${phase}`;
+        document.getElementById('phaseSubtitle').textContent = this.getPhaseSubtitle(phase);
+        
+        // Atualizar história da fase
+        document.getElementById('phaseStory').innerHTML = this.getPhaseStory(phase);
+        
+        // Atualizar estatísticas apenas se não for a fase de introdução
+        if (phase === 0) {
+            document.getElementById('statsDetails').style.display = 'none'; // Ocultar completamente
+            document.getElementById('replayPhase').style.display = 'none';
+        } else {
+            const isCurrentPhase = phase === this.gameState.currentGameState.currentPhase;
+            const isCompleted = this.gameState.currentGameState.phaseStats[`${phase}B`]?.completed;
+            
+            // Ajustar texto do botão baseado no estado da fase
+            const replayButton = document.getElementById('replayPhase');
+            replayButton.style.display = 'block';
+            replayButton.innerHTML = isCompleted ? 
+                '<i class="fas fa-redo"></i> Jogar Novamente' : 
+                '<i class="fas fa-play"></i> Jogar';
+
+            // Mostrar ou ocultar statsDetails baseado no estado de conclusão
+            const statsDetails = document.getElementById('statsDetails');
+            if (isCurrentPhase && !isCompleted) {
+                statsDetails.style.display = 'none'; // Ocultar completamente quando não concluída
+            } else {
+                statsDetails.style.display = 'block';
+                statsDetails.innerHTML = `
+                    <div class="phase-stats with-stats">
+                        <div class="stat-item accuracy-stat">
+                            <div class="accuracy-header">
+                                <i class="fas fa-percentage"></i>
+                                <span>Taxa de Acerto: ${Math.round(this.gameState.getCombinedPhaseStats(phase).accuracy)}%</span>
+                            </div>
+                            <div class="accuracy-bar">
+                                <div class="accuracy-progress" style="width: ${Math.round(this.gameState.getCombinedPhaseStats(phase).accuracy)}%"></div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-check"></i>
+                            <span>Acertos: ${this.gameState.getCombinedPhaseStats(phase).corrects}</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-times"></i>
+                            <span>Erros: ${this.gameState.getCombinedPhaseStats(phase).errors}</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-clock"></i>
+                            <span>Tempo Total: ${Math.round(this.gameState.getCombinedPhaseStats(phase).totalTime / 1000)}s</span>
+                        </div>
+                        ${this.gameState.getCombinedPhaseStats(phase).completionDate ? `
+                            <div class="stat-item">
+                                <i class="fas fa-calendar"></i>
+                                <span>Concluído em: ${new Date(this.gameState.getCombinedPhaseStats(phase).completionDate).toLocaleDateString()}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+        }
+
+        // Configurar navegação
+        this.setupPhaseNavigation(phase);
+
+        // Ajustar o estilo do botão de próximo quando estiver na fase 0
+        const nextBtn = document.getElementById('nextPhase');
+        if (phase === 0) {
+            nextBtn.className = 'nav-arrow next-phase-btn';
+            nextBtn.innerHTML = 'Continuar <i class="fas fa-arrow-right"></i>';
+        } else {
+            nextBtn.className = 'nav-arrow';
+            nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+        }
+
+        // Desabilitar o botão se a fase atual for menor ou igual à fase máxima concluída
+        if (phase !== 0 && phase === this.gameState.currentGameState.highestPhase) {
+            console.log('Fase atual: ', phase);
+            console.log('Fase máxima concluída: ', this.gameState.currentGameState.highestPhase);
+            nextBtn.classList.add('disabled');
+        }
+
+        modal.style.display = 'block';
+
+        // Configurar os event listeners dos botões
+        document.getElementById('replayPhase').onclick = () => {
+            if (phase === 0) {
+                // Se estiver na fase inicial, apenas iniciar o jogo
+                modal.style.display = 'none';
+                this.gameState.setIsPaused(false);
+                document.getElementById('game').classList.remove('game-paused');
+                this.generateQuestion();
+            } else {
+                // Para outras fases, manter o comportamento atual
+    
+                // Testar se a fase atual já foi concluída
+                if (this.gameState.currentGameState.phaseStats[`${phase}B`]?.completed) {
+                    if (confirm('Ao rejogar a fase, você perderá as estatísticas atuais. Deseja continuar?')) {
+                        modal.style.display = 'none';
+                        this.changePhase(phase);
+                        this.gameState.setIsPaused(false);
+                        document.getElementById('game').classList.remove('game-paused');
+                    }
+                } else {
+                    // Se a fase não foi concluída, permitir (re)jogar sem aviso.
+                    modal.style.display = 'none';
+                    this.changePhase(phase);
+                    /*
+                    this.gameState.setIsPaused(false);
+                    document.getElementById('game').classList.remove('game-paused');
+                    console.log('Estado da Pausa: ', this.gameState.isPaused);
+                    */
+                    this.resumeGame();
+                }
+            }
+        };
+        
+        document.getElementById('closeStats').onclick = () => {
+            modal.style.display = 'none';
+            this.gameState.setIsPaused(false);
+            document.getElementById('game').classList.remove('game-paused');
+            document.body.style.background = `url('${this.backgroundImages[currentPhase]}') no-repeat center center fixed`;
+            document.body.style.backgroundSize = 'cover';
+        };
+    }
+
+    setupPhaseNavigation(currentPhase) {
+        const prevBtn = document.getElementById('prevPhase');
+        const nextBtn = document.getElementById('nextPhase');
+        
+        // Encontrar fases disponíveis
+        const availablePhases = this.getAvailablePhases();
+        const currentIndex = availablePhases.indexOf(currentPhase);
+        
+        // Configurar botão anterior
+        prevBtn.classList.toggle('disabled', currentIndex <= 0);
+        prevBtn.onclick = () => {
+            if (currentIndex > 0) {
+                this.showPhaseHistory(availablePhases[currentIndex - 1]);
+            }
+        };
+        
+        // Configurar botão próximo
+        nextBtn.classList.toggle('disabled', currentIndex >= availablePhases.length - 1);
+        nextBtn.onclick = () => {
+            if (currentIndex < availablePhases.length - 1) {
+                this.showPhaseHistory(availablePhases[currentIndex + 1]);
+            }
+        };
+    }
+
+    getAvailablePhases() {
+        const phases = [];
+        // Adicionar fase inicial (0) se houver história
+        phases.push(0);
+        
+        // Adicionar fases completadas e fase atual
+        for (let phase = 2; phase <= 10; phase++) {
+            // Incluir se a fase foi completada OU se é a fase atual
+            if (this.gameState.currentGameState.phaseStats[`${phase}B`]?.completed || 
+                phase === this.gameState.currentGameState.currentPhase) {
+                phases.push(phase);
+            }
+        }
+        return phases;
+    }
+
+    getPhaseSubtitle(phase) {
+        if (phase === 0) return "O Início da Jornada";
+        if (phase === 2) return "Selva Amazônica";
+        if (phase === 10) return "A Fase Final";
+        return `Tabuada do ${phase}`;
+    }
+
+    getPhaseStory(phase) {
+        // Retorna o HTML com a história da fase
+        const hasBackground = phase > 0 && this.backgroundImages[phase];
+        const storyWrapper = hasBackground ? 'story-with-thumbnail' : '';
+        const thumbnail = hasBackground ? `
+            <div class="phase-thumbnail" style="background-image: url('${this.backgroundImages[phase]}')"></div>
+        ` : '';
+
+        switch(phase) {
+            case 0:
+                return `
+                    <!-- <img src="img/Numi.webp" alt="Início da jornada"> -->
+                    <div class="phase-thumbnail" style="background-image: url('img/Numi.webp'); height: 230px; width: 230px; float: left; margin-right: 10px;"></div>
+                    <p>Olá, meu nome é <b>Numi</b>, o guardião da matemática!</p>
+                    <img src="img/Ignorius.webp" alt="Ignórius" style="height: 110px; width: 110px; float: right; margin-left: 10px;">
+                    <p>O vilão <b>Ignórius</b> está tentando dominar o mundo e eu preciso de sua ajuda para derrotá-lo!</p>
+                    <div style="clear: right;"></div>
+                    <!-- <p>Em um mundo onde os números são a chave para desbloquear o conhecimento, 
+                    você começa sua jornada para se tornar um mestre da matemática...</p> -->
+                    <br />
+                    <p style="text-align: center;">Para isso, saíremos em uma jornada para nos tornar mestres da matemática!</p>
+                    <!-- <p style="text-align: center;">Vamos começar?</p> -->
+                `;
+            case 2:
+                return `
+                    <div class="${storyWrapper}">
+                        ${thumbnail}
+                        <p>Sua jornada começa na <b>selva Amazônica</b>!</p>
+                        <br />
+                        <p>Aqui você vai aprender a <b>tabuada do 2</b>.</p>
+                        <!-- <p>Os números pares serão seus primeiros aliados na construção do seu conhecimento matemático...</p> -->
+                    </div>
+                `;
+            case 3:
+                return `
+                    <div class="${storyWrapper}">
+                        ${thumbnail}
+                        <p><b>Cuidado com a múmia!</b></p>
+                        <br />
+                        <p>Visite as pirâmides do <b>Egito</b>, e aprenda a <b>tabuada do 3</b>!</p>
+                    </div>
+                `;
+            case 4:
+                return `
+                    <div class="${storyWrapper}">
+                        ${thumbnail}
+                        <p><b>Konnichiwa!</b></p>
+                        <br />
+                        <p>Aqui no <b>Japão</b> você vai aprender a <b>tabuada do 4</b>!</p>
+                    </div>
+                `;
+            case 5:
+                return `
+                    <div class="${storyWrapper}">
+                        ${thumbnail}
+                        <p><b>Grecia!</b></p>
+                        <br />
+                        <p>Aqui você vai aprender a <b>tabuada do 5</b>!</p>
+                    </div>
+                `;
+            case 6:
+                return `
+                    <div class="${storyWrapper}">
+                        ${thumbnail}
+                        <p>Você já chegou à <b>Grande Muralha da China</b> e está mais perto de completar sua jornada!</p>
+                        <br />
+                        <p>Aqui você vai aprender a <b>tabuada do 6</b>!</p>
+                    </div>
+                `;
+            case 7:
+                return `
+                    <div class="${storyWrapper}">
+                        ${thumbnail}
+                        <p><b>Veneza!</b> Embarque em uma gondola e vamos aprender a <b>tabuada do 7</b>!</p>
+                    </div>
+                `;
+            case 8:
+                return `
+                    <div class="${storyWrapper}">
+                        ${thumbnail}
+                        <p><b>Londres!</b> Aqui você vai aprender a <b>tabuada do 8</b>!</p>
+                    </div>
+                `;
+            case 9:
+                return `
+                    <div class="${storyWrapper}">
+                        ${thumbnail}
+                        <p>Brr! Que frio! Aqui na <b>Antártica</b> vamos aprender a <b>tabuada do 9</b>!</p>
+                    </div>
+                `;
+            case 10:
+                return `
+                    <div class="${storyWrapper}">
+                        ${thumbnail}
+                        <p>Você entrou em um portal para <b>outra dimensão</b>.</p>
+                        <br />
+                        <p>Nesse mundo surreal, você precisará <b>testar os conhecimentos</b> que adquiriu para <b>conquistar a vitória</b>!</p>
+                    </div>
+                `;
+            default:
+                return `
+                    <div class="${storyWrapper}">
+                        ${thumbnail}
+                        <p>Você dominou a tabuada do ${phase}!</p>
+                    </div>
+                `;
+        }
     }
 }
 
