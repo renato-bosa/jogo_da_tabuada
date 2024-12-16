@@ -787,15 +787,6 @@ class GameController {
             
             // Mostrar o modal com as estatísticas atualizadas
             this.showNextPhaseModal();
-
-            // Salvar as estatísticas atuais no estado do jogo
-            // Acho que não é mais necessário, mas deixei aqui para referência futura.
-            /*
-            var fase_atual = this.gameState.currentGameState.currentPhase;
-            var subfase_atual = this.gameState.currentGameState.currentSubPhase;
-            var estatisticas_acumuladas = this.gameState.accumulatedStats;
-            this.gameState.setPhaseStats(fase_atual, subfase_atual, estatisticas_acumuladas);
-            */
         }
         
         this.gameState.saveCurrentGame();
@@ -805,7 +796,7 @@ class GameController {
         console.log('Iniciando handleWrongAnswer');
         this.playSound('wrongSound');
 
-        // Atualizar estat������sticas
+        // Atualizar estatsticas
         // (usamos o método updatePhaseStats com o parâmetro false para indicar que a resposta é errada.)
         this.gameState.updatePhaseStats(false);
         
@@ -1319,8 +1310,11 @@ class GameController {
                 this.gameState.setIsPaused(true);
                 document.getElementById('game').classList.add('game-paused');
                 this.updateBackground();
-                this.pauseGame(this.gameState.globalConfigs.PAUSE_TYPES.NEXT_PHASE);
-                this.generateQuestion();
+                // this.pauseGame(this.gameState.globalConfigs.PAUSE_TYPES.NEXT_PHASE);
+
+                // Ao invés de mostrar o modal de pausa, mostra o modal de navegação para a fase recém aberta:
+                this.showPhaseHistory(this.gameState.currentGameState.currentPhase);
+                // this.generateQuestion();
             }
         });
         
