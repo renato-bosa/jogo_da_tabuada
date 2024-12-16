@@ -1848,7 +1848,7 @@ class GameController {
         } else {
             closeButton.style.display = 'block';
             modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-            modalTitle.innerHTML = '<i class="fas fa-bars"></i> Menu do Jogo';
+            modalTitle.innerHTML = '<i class="fas fa-bars"></i> Menu de Partidas';
             
             // Remover mensagem de boas-vindas se existir
             const welcomeMessage = modal.querySelector('.pause-message');
