@@ -2319,7 +2319,7 @@ class GameController {
                     <!-- <p>Em um mundo onde os números são a chave para desbloquear o conhecimento, 
                     você começa sua jornada para se tornar um mestre da matemática...</p> -->
                     <br />
-                    <p style="text-align: center;">Para isso, saíremos em uma jornada para nos tornar mestres da matemática!</p>
+                    <p style="text-align: center;">Para isso, vamos sair em uma jornada de aventuras matemáticas!</p>
                     <!-- <p style="text-align: center;">Vamos começar?</p> -->
                 `;
             case 2:
