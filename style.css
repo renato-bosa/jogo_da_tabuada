@@ -204,6 +204,13 @@ button:hover {
     /* animation: slideIn 0.3s;*/
 }
 
+/* Caso a largura do viewport seja menor que 700px, a largura do modal-content é ajustada */
+@media screen and (max-width: 700px) {
+    .modal-content {
+        width: 92%;
+    }
+}
+
 .config-option {
     margin: 20px 0;
     text-align: left;
