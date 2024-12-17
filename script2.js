@@ -2313,13 +2313,15 @@ class GameController {
                     <!-- <img src="img/Numi.webp" alt="Início da jornada"> -->
                     <div class="phase-thumbnail" style="background-image: url('img/Numi.webp'); height: 230px; width: 230px; float: left; margin-right: 10px;"></div>
                     <p>Olá, meu nome é <b>Numi</b>, o guardião da matemática!</p>
+                    <br class='hidden-on-small' />
+                    <div style="clear: both;" class="display-on-small"></div>
                     <img src="img/Ignorius.webp" alt="Ignórius" style="height: 110px; width: 110px; float: right; margin-left: 10px;">
-                    <p>O vilão <b>Ignórius</b> está tentando dominar o mundo e eu preciso de sua ajuda para derrotá-lo!</p>
+                    <p class='padding-left-condicional'>O vilão <b>Ignórius</b> está tentando dominar o mundo e eu preciso de sua ajuda para derrotá-lo!</p>
                     <div style="clear: right;"></div>
                     <!-- <p>Em um mundo onde os números são a chave para desbloquear o conhecimento, 
                     você começa sua jornada para se tornar um mestre da matemática...</p> -->
                     <br />
-                    <p style="text-align: center;">Para isso, vamos sair em uma jornada de aventuras matemáticas!</p>
+                    <p style="text-align: center;">Para isso, vamos sair em uma jornada de <b>aventuras matemáticas</b>!</p>
                     <!-- <p style="text-align: center;">Vamos começar?</p> -->
                 `;
             case 2:

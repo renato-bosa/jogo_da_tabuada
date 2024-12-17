@@ -13,7 +13,7 @@ body {
 
 .container {
     max-width: 600px;
-    width: 90%;
+    width: 100%;
     padding: 30px;
     
     background: linear-gradient(
@@ -29,6 +29,7 @@ body {
     border-radius: 20px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     text-align: center;
+    box-sizing: border-box;
 }
 
 h1 {
@@ -204,10 +205,28 @@ button:hover {
     /* animation: slideIn 0.3s;*/
 }
 
-/* Caso a largura do viewport seja menor que 700px, a largura do modal-content é ajustada */
-@media screen and (max-width: 700px) {
+/* Caso a largura do viewport seja menor que x, a largura do modal-content é ajustada */
+@media screen and (max-width: 750px) {
     .modal-content {
-        width: 92%;
+        width: 95%;
+    }
+}
+
+@media screen and (min-width: 540px) {
+    .padding-left-condicional {
+        padding-left: 244px;
+    }
+    .display-on-small {
+        display: none;
+    }
+}
+
+@media screen and (max-width: 540px) {
+    .hidden-on-small {
+        display: none;
+    }
+    .display-on-small {
+        display: block;
     }
 }
 
