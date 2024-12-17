@@ -106,7 +106,7 @@ h1 {
 
 #question {
     font-size: 3em;
-    margin: 30px 0;
+    margin: 15px 0 5px 0;
     color: #2d3436;
     font-weight: bold;
 }
@@ -1546,4 +1546,79 @@ button:hover {
 
 #closeStats {
     display: none;
+}
+
+/* Adicionar estilos para o indicador de domínio */
+.mastery-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 10px 0;
+    justify-content: center;
+}
+
+.mastery-level {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    transition: all 0.3s ease;
+}
+
+/* Nível 0 - vermelho */
+.mastery-level.level-0 {
+    background-color: #ff4757;
+    animation: pulse 1s infinite;
+}
+
+/* Nível 1 - verde */
+.mastery-level.level-1 {
+    background-color: #2ed573;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* Estilos para a mensagem do Numi no modal de parabéns */
+.numi-message {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background-color: rgba(30, 60, 114, 0.05);
+    padding: 15px;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.numi-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #1e3c72;
+}
+
+.numi-text {
+    color: #1e3c72;
+    font-size: 1.2em;
+    margin: 0;
+    flex-grow: 1;
+    font-weight: bold;
+}
+
+/* Ajuste responsivo para telas menores */
+@media screen and (max-width: 480px) {
+    .numi-message {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .numi-avatar {
+        width: 60px;
+        height: 60px;
+    }
 }

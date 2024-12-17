@@ -839,8 +839,13 @@ class GameController {
             this.gameState.currentGameState.currentQuestion = this.gameState.currentGameState.currentQuestions[questionKey];
             console.log('Questão selecionada:', this.gameState.currentGameState.currentQuestion);
             
+            // Atualizar a questão
             document.getElementById('question').textContent = 
                 `${this.gameState.currentGameState.currentQuestion.num1} × ${this.gameState.currentGameState.currentQuestion.num2} = ?`;
+            
+            // Atualizar o indicador de domínio
+            this.updateMasteryIndicator(this.gameState.currentGameState.currentQuestions[questionKey].masteryLevel);
+            
             document.getElementById('answer').value = '';
             
             if (!this.gameState.getIsPaused()) {
@@ -1159,6 +1164,12 @@ class GameController {
         var congratsMessage = `
             <h2>Parabéns! <i class="fas fa-star"></i></h2>
             <p>Você dominou a ${currentPhaseText}</p>
+            
+            <div class="numi-message">
+                <img src="img/Numi.webp" alt="Numi" class="numi-avatar">
+                <p class="numi-text">Você está indo bem, continue assim!</p>
+            </div>
+
             ${this.gameState.currentGameState.lives < this.gameState.globalConfigs.MAX_LIVES ? `
                 <div class="bonus-life">
                     <i class="fas fa-heart"></i>
@@ -1231,6 +1242,12 @@ class GameController {
             modalContent.innerHTML = `
                 <h2>Parabéns! <i class="fas fa-star"></i></h2>
                 <p>Você dominou a tabuada do <span id="currentPhase">${this.gameState.currentGameState.currentPhase}</span>!</p>
+                
+                <div class="numi-message">
+                    <img src="img/Numi.webp" alt="Numi" class="numi-avatar">
+                    <p class="numi-text">Você está indo bem, continue assim!</p>
+                </div>
+
                 ${this.gameState.currentGameState.lives < this.gameState.globalConfigs.MAX_LIVES ? `
                     <div class="bonus-life">
                         <i class="fas fa-heart"></i>
@@ -2408,6 +2425,48 @@ class GameController {
                     </div>
                 `;
         }
+    }
+
+    // Adicionar novo método para atualizar o indicador de domínio
+    updateMasteryIndicator(level) {
+        // Primeiro, verificar se o indicador já existe
+        let indicator = document.querySelector('.mastery-indicator');
+        
+        // Se não existir, criar
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.className = 'mastery-indicator';
+            
+            // Criar os dois círculos
+            for (let i = 0; i < 2; i++) {
+                const circle = document.createElement('div');
+                circle.className = 'mastery-level';
+                indicator.appendChild(circle);
+            }
+            
+            // Inserir após a questão
+            const question = document.getElementById('question');
+            question.parentNode.insertBefore(indicator, question.nextSibling);
+        }
+        
+        // Atualizar os círculos baseado no nível atual
+        const circles = indicator.querySelectorAll('.mastery-level');
+        circles.forEach((circle, index) => {
+            // Remover todas as classes de nível
+            circle.classList.remove('level-0', 'level-1');
+            
+            if (index === 0) {
+                // Primeira bolinha - mostra nível 0 (vermelho)
+                if (level === 0) {
+                    circle.classList.add('level-0');
+                }
+            } else if (index === 1) {
+                // Segunda bolinha - mostra nível 1 (verde)
+                if (level === 1) {
+                    circle.classList.add('level-1');
+                }
+            }
+        });
     }
 }
 
