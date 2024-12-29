@@ -1584,7 +1584,7 @@ button:hover {
 }
 
 /* Estilos para a mensagem do Numi no modal de parabéns */
-.numi-message {
+.character-message {
     display: flex;
     align-items: center;
     gap: 15px;
@@ -1600,6 +1600,22 @@ button:hover {
     border-radius: 50%;
     object-fit: cover;
     border: 3px solid #1e3c72;
+}
+
+.ignorios-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #494e59;
+}
+
+.ignorios-text {
+    color: #494e59;
+    font-size: 1.2em;
+    margin: 0;
+    flex-grow: 1;
+    font-weight: bold;
 }
 
 .numi-text {

@@ -1165,7 +1165,7 @@ class GameController {
             <h2>Parabéns! <i class="fas fa-star"></i></h2>
             <p>Você dominou a ${currentPhaseText}</p>
             
-            <div class="numi-message">
+            <div class="character-message">
                 <img src="img/Numi.webp" alt="Numi" class="numi-avatar">
                 <p class="numi-text">Você está indo bem, continue assim!</p>
             </div>
@@ -1243,9 +1243,9 @@ class GameController {
                 <h2>Parabéns! <i class="fas fa-star"></i></h2>
                 <p>Você dominou a tabuada do <span id="currentPhase">${this.gameState.currentGameState.currentPhase}</span>!</p>
                 
-                <div class="numi-message">
+                <div class="character-message">
                     <img src="img/Numi.webp" alt="Numi" class="numi-avatar">
-                    <p class="numi-text">Você está indo bem, continue assim!</p>
+                    <p class="numi-text">Você derrotou o Ignórios na tabuada do ${this.gameState.currentGameState.currentPhase}!</p>
                 </div>
 
                 ${this.gameState.currentGameState.lives < this.gameState.globalConfigs.MAX_LIVES ? `
@@ -1274,6 +1274,12 @@ class GameController {
                         </div>
                     </div>
                 ` : ''}
+
+                <div class="character-message">
+                    <img src="img/ignorios_sad_animated.gif" alt="Ignórios" class="ignorios-avatar">
+                    <p class="ignorios-text">Dessa vez você venceu, mas vamos ver quem vence na próxima!</p>
+                </div>
+                
                 <p>Próxima fase: Tabuada do <span id="nextPhase">${nextPhaseText}</span></p>
                 <button id="startNextPhase" class="next-phase-btn">
                     Continuar <i class="fas fa-arrow-right"></i>
