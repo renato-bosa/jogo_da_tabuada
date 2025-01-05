@@ -1098,72 +1098,11 @@ class GameController {
         clearInterval(this.gameState.timerInterval);
         
         // Verificar se completou a fase 10B (Zerou o jogo)
-        if (this.gameState.currentGameState.currentPhase === 10 && this.gameState.currentGameState.currentSubPhase === 'B' && this.gameState.isSubPhaseComplete()) {
+        if (this.gameState.currentGameState.currentPhase === 10 &&
+            this.gameState.currentGameState.currentSubPhase === 'B' &&
+            this.gameState.isSubPhaseComplete()) {
 
-            // Obter estatísticas combinadas da fase 10
-            const stats = this.gameState.getCombinedPhaseStats(10);
-            
-            // Mostrar modal especial de conclusão do jogo
-            const modal = document.getElementById('nextPhaseModal');
-            const modalContent = modal.querySelector('.modal-content');
-            
-            modalContent.innerHTML = `
-                <h2><i class="fas fa-crown"></i> Parabéns!</h2>
-                <p>Você completou a última fase do Jogo da Tabuada!</p>
-
-                <div class="character-message">
-                    <img src="img/Numi.webp" alt="Numi" class="numi-avatar">
-                    <p class="numi-text">Parabéns! Você provou que é um mestre da multiplicação e derrotou o Ignórios!</p>
-                </div>
-
-                <div class="phase-stats">
-                    <div class="stat-item">
-                        <i class="fas fa-check"></i>
-                        <span>Acertos: ${stats.corrects}</span>
-                    </div>
-                    <div class="stat-item">
-                        <i class="fas fa-times"></i>
-                        <span>Erros: ${stats.errors}</span>
-                    </div>
-                    <div class="stat-item">
-                        <i class="fas fa-percentage"></i>
-                        <span>Taxa de Acerto: ${Math.round(stats.accuracy)}%</span>
-                    </div>
-                    <div class="stat-item">
-                        <i class="fas fa-clock"></i>
-                        <span>Tempo Total: ${Math.round(stats.totalTime / 1000)}s</span>
-                    </div>
-                </div>
-
-                <div class="character-message">
-                    <img src="img/ignorios_sad_animated.gif" alt="Ignórios" class="ignorios-avatar">
-                    <p class="ignorios-text">${this.getIgnoriosPhrase(this.gameState.currentGameState.currentPhase)}</p>
-                </div>
-                
-                <p>Você pode continuar jogando para melhorar a sua pontuação e suas habilidades!</p>
-                <button id="startNextPhase" class="next-phase-btn">
-                    Escolher Fase <i class="fas fa-map-marked-alt"></i>
-                </button>
-            `;
-            
-            // Chamar o efeito de confete especial
-            setTimeout(() => {
-                // Chama o confete dourado primeiro
-                this.celebrateGameCompletion();
-                // Chama o confete colorido normal com um pequeno atraso
-                setTimeout(() => this.celebrateCompletion(), 50);
-            }, 50);
-            
-            modal.style.display = 'block';
-            
-            // Reattach event listener para o botão
-            document.getElementById('startNextPhase').addEventListener('click', () => {
-                modal.style.display = 'none';
-                
-                // Ao invés de reiniciar a fase 10, vamos abrir o modal de navegação
-                this.showPhaseHistory(10);
-            });
-            
+            this.showGameCompletionModal();
             return;
         }
 
@@ -1341,11 +1280,13 @@ class GameController {
             this.gameState.initializePhaseQuestions();
         }
 
+        /*
         console.log('Novo estado após mudança:', {
             fase: this.gameState.currentGameState.currentPhase,
             subfase: this.gameState.currentGameState.currentSubPhase,
             proximaFase: nextPhaseText
         });
+        */
 
         this.updateProgressBar();
         modal.style.display = 'block';
@@ -1353,13 +1294,82 @@ class GameController {
         // Reattach event listener para o novo botão
         document.getElementById('startNextPhase').addEventListener('click', () => this.continueGame());
         
+        
+        /*
         console.log('Estado do jogo após configurar modal:', {
             fase: this.gameState.currentGameState.currentPhase,
             subfase: this.gameState.currentGameState.currentSubPhase,
             pausado: this.gameState.getIsPaused()
         });
+        */
         
         this.gameState.saveCurrentGame();
+    }
+
+    showGameCompletionModal() {
+        // Obter estatísticas combinadas da fase 10
+        const stats = this.gameState.getCombinedPhaseStats(10);
+            
+        // Mostrar modal especial de conclusão do jogo
+        const modal = document.getElementById('nextPhaseModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        modalContent.innerHTML = `
+            <h2><i class="fas fa-crown"></i> Parabéns!</h2>
+            <p>Você completou a última fase do Jogo da Tabuada!</p>
+
+            <div class="character-message">
+                <img src="img/Numi.webp" alt="Numi" class="numi-avatar">
+                <p class="numi-text">Parabéns! Você provou que é um mestre da multiplicação e derrotou o Ignórios!</p>
+            </div>
+
+            <div class="phase-stats">
+                <div class="stat-item">
+                    <i class="fas fa-check"></i>
+                    <span>Acertos: ${stats.corrects}</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-times"></i>
+                    <span>Erros: ${stats.errors}</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-percentage"></i>
+                    <span>Taxa de Acerto: ${Math.round(stats.accuracy)}%</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-clock"></i>
+                    <span>Tempo Total: ${Math.round(stats.totalTime / 1000)}s</span>
+                </div>
+            </div>
+
+            <div class="character-message">
+                <img src="img/ignorios_sad_animated.gif" alt="Ignórios" class="ignorios-avatar">
+                <p class="ignorios-text">${this.getIgnoriosPhrase(this.gameState.currentGameState.currentPhase)}</p>
+            </div>
+            
+            <p>Você pode continuar jogando para melhorar a sua pontuação e suas habilidades!</p>
+            <button id="startNextPhase" class="next-phase-btn">
+                Escolher Fase <i class="fas fa-map-marked-alt"></i>
+            </button>
+        `;
+        
+        // Chamar o efeito de confete especial
+        setTimeout(() => {
+            // Chama o confete dourado primeiro
+            this.celebrateGameCompletion();
+            // Chama o confete colorido normal com um pequeno atraso
+            setTimeout(() => this.celebrateCompletion(), 50);
+        }, 50);
+        
+        modal.style.display = 'block';
+        
+        // Reattach event listener para o botão
+        document.getElementById('startNextPhase').addEventListener('click', () => {
+            modal.style.display = 'none';
+            
+            // Ao invés de reiniciar a fase 10, vamos abrir o modal de navegação
+            this.showPhaseHistory(10);
+        });
     }
 
     continueGame() {
