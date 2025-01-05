@@ -44,6 +44,7 @@ class GameState {
 
         // Carregar jogos salvos ao inicializar
         this.loadSavedGames();
+
     }
 
     // Método para inicializar as estatísticas das fases
@@ -556,6 +557,38 @@ class GameController {
             9: 'img/fase-9-landscape.webp',
             10: 'img/fase-10-landscape.webp'
         };
+
+        // Sistema de frases do Ignórios
+        this.ignoriosPhrases = {
+            // 9 frases para as vitórias das tabuadas de 2, 3, 4, 5, 6, 7, 8, 9 e fase-final.
+            defeated: [
+                // Vitória na tabuada de 2
+                "Dessa vez você venceu, mas vamos ver quem vence na próxima!",
+                // Vitória na tabuada de 3
+                "Você é mais esperto do que eu pensava!",
+                // Vitória na tabuada de 4
+                "Não acredito que perdi de novo! Preciso estudar mais...",
+                // Vitória na tabuada de 5
+                "Impossível! Como você conseguiu resolver todas essas contas?",
+                // Vitória na tabuada de 6
+                "Argh! Você está ficando muito forte na matemática!",
+                // Vitória na tabuada de 7
+                // "Ok, ok, dessa vez você venceu! Mas ainda temos mais fases pela frente!",
+                "Vou treinar mais e voltar mais forte na próxima fase!",
+                // Vitória na tabuada de 8
+                "Suas habilidades matemáticas são impressionantes...",
+                // Vitória na tabuada de 9
+                "Parabéns... Você realmente sabe multiplicar, mas <b>preparei um desafio final para você!</b>",
+                // Vitória na fase final
+                "Você realmente dominou todas as tabuadas... Talvez eu devesse virar seu aluno!"
+            ],
+            encouragement: [
+                "Ha! Ainda tem muito o que aprender!",
+                "Continue tentando, quem sabe um dia você me vence!",
+                "Está quase lá, mas não é páreo para mim!"
+            ]
+        };
+
         this.initializeEventListeners();
     }
 
@@ -1052,12 +1085,14 @@ class GameController {
     }
 
     showNextPhaseModal() {
-        console.log('=== Mostrando Modal de Próxima Fase ===');
+        // console.log('=== Mostrando Modal de Próxima Fase ===');
+        /*
         console.log('Estado atual antes da mudança:', {
             fase: this.gameState.currentGameState.currentPhase,
             subfase: this.gameState.currentGameState.currentSubPhase,
             questõesCompletadas: this.gameState.isSubPhaseComplete()
         });
+        */
 
         this.gameState.setIsPaused(true);
         clearInterval(this.gameState.timerInterval);
@@ -1075,6 +1110,12 @@ class GameController {
             modalContent.innerHTML = `
                 <h2><i class="fas fa-crown"></i> Parabéns!</h2>
                 <p>Você completou a última fase do Jogo da Tabuada!</p>
+
+                <div class="character-message">
+                    <img src="img/Numi.webp" alt="Numi" class="numi-avatar">
+                    <p class="numi-text">Parabéns! Você provou que é um mestre da multiplicação e derrotou o Ignórios!</p>
+                </div>
+
                 <div class="phase-stats">
                     <div class="stat-item">
                         <i class="fas fa-check"></i>
@@ -1093,9 +1134,15 @@ class GameController {
                         <span>Tempo Total: ${Math.round(stats.totalTime / 1000)}s</span>
                     </div>
                 </div>
+
+                <div class="character-message">
+                    <img src="img/ignorios_sad_animated.gif" alt="Ignórios" class="ignorios-avatar">
+                    <p class="ignorios-text">${this.getIgnoriosPhrase(this.gameState.currentGameState.currentPhase)}</p>
+                </div>
+                
                 <p>Você pode continuar jogando para melhorar a sua pontuação e suas habilidades!</p>
                 <button id="startNextPhase" class="next-phase-btn">
-                    Continuar <i class="fas fa-redo"></i>
+                    Escolher Fase <i class="fas fa-map-marked-alt"></i>
                 </button>
             `;
             
@@ -1112,13 +1159,9 @@ class GameController {
             // Reattach event listener para o botão
             document.getElementById('startNextPhase').addEventListener('click', () => {
                 modal.style.display = 'none';
-                // Reiniciar a fase 10 ao invés de avançar
-                this.gameState.currentGameState.currentSubPhase = 'A';
-                this.gameState.initializePhaseQuestions();
-                this.gameState.resetPhaseStats();
-                this.generateQuestion();
-                this.gameState.setIsPaused(false);
-                document.getElementById('game').classList.remove('game-paused');
+                
+                // Ao invés de reiniciar a fase 10, vamos abrir o modal de navegação
+                this.showPhaseHistory(10);
             });
             
             return;
@@ -1209,10 +1252,6 @@ class GameController {
         if (this.gameState.currentGameState.currentSubPhase === 'A') {
             console.log('Avançando para subfase B');
 
-            // Acumular estatísticas da subfase A
-            // this.gameState.accumulatePhaseStats();
-            // Agora não acumulamos estatísticas, armazenamos separadamente para cada subfase.
-
             // Atualizar a subfase para B
             this.gameState.currentGameState.currentSubPhase = 'B';
             
@@ -1229,6 +1268,7 @@ class GameController {
                 startTime: Date.now()
             };
             this.gameState.initializePhaseQuestions();
+
         } else {
             console.log('Completou fase inteira, avançando para próxima fase');
             
@@ -1277,7 +1317,7 @@ class GameController {
 
                 <div class="character-message">
                     <img src="img/ignorios_sad_animated.gif" alt="Ignórios" class="ignorios-avatar">
-                    <p class="ignorios-text">Dessa vez você venceu, mas vamos ver quem vence na próxima!</p>
+                    <p class="ignorios-text">${this.getIgnoriosPhrase(this.gameState.currentGameState.currentPhase)}</p>
                 </div>
                 
                 <p>Próxima fase: Tabuada do <span id="nextPhase">${nextPhaseText}</span></p>
@@ -1311,35 +1351,7 @@ class GameController {
         modal.style.display = 'block';
         
         // Reattach event listener para o novo botão
-        document.getElementById('startNextPhase').addEventListener('click', () => {
-            console.log('=== Clique no botão Continuar ===');
-            console.log('Estado atual:', {
-                fase: this.gameState.currentGameState.currentPhase,
-                subfase: this.gameState.currentGameState.currentSubPhase
-            });
-            
-            modal.style.display = 'none';
-            
-            // Se completou a fase inteira (subfase B), mostra o modal de pausa
-            if (this.gameState.currentGameState.currentSubPhase === 'B') {
-                console.log('Subfase B: Continuando jogo sem pausar');
-                // Apenas fecha o modal e continua o jogo
-                this.gameState.setIsPaused(false);
-                document.getElementById('game').classList.remove('game-paused');
-                this.generateQuestion();
-            } else {
-                console.log('Subfase A: Mostrando modal de pausa para próxima fase');
-                // Completou a fase inteira, mostra o modal de pausa para próxima fase
-                this.gameState.setIsPaused(true);
-                document.getElementById('game').classList.add('game-paused');
-                this.updateBackground();
-                // this.pauseGame(this.gameState.globalConfigs.PAUSE_TYPES.NEXT_PHASE);
-
-                // Ao invés de mostrar o modal de pausa, mostra o modal de navegação para a fase recém aberta:
-                this.showPhaseHistory(this.gameState.currentGameState.currentPhase);
-                // this.generateQuestion();
-            }
-        });
+        document.getElementById('startNextPhase').addEventListener('click', () => this.continueGame());
         
         console.log('Estado do jogo após configurar modal:', {
             fase: this.gameState.currentGameState.currentPhase,
@@ -1348,6 +1360,37 @@ class GameController {
         });
         
         this.gameState.saveCurrentGame();
+    }
+
+    continueGame() {
+        console.log('=== Continuando o jogo ===');
+        console.log('Estado atual:', {
+            fase: this.gameState.currentGameState.currentPhase,
+            subfase: this.gameState.currentGameState.currentSubPhase
+        });
+
+        const modal = document.getElementById('nextPhaseModal');
+        modal.style.display = 'none';
+        
+        // Se completou a fase inteira (subfase B), mostra o modal de pausa
+        if (this.gameState.currentGameState.currentSubPhase === 'B') {
+            console.log('Iniciando subfase B: Continuando jogo sem pausar');
+            // Apenas fecha o modal e continua o jogo
+            this.gameState.setIsPaused(false);
+            document.getElementById('game').classList.remove('game-paused');
+            this.generateQuestion();
+        } else {
+            console.log('Iniciando subfase A: Mostrando modal de pausa para próxima fase');
+            // Completou a fase inteira, mostra o modal de pausa para próxima fase
+            this.gameState.setIsPaused(true);
+            document.getElementById('game').classList.add('game-paused');
+            this.updateBackground();
+            // this.pauseGame(this.gameState.globalConfigs.PAUSE_TYPES.NEXT_PHASE);
+
+            // Ao invés de mostrar o modal de pausa, mostra o modal de navegação para a fase recém aberta:
+            this.showPhaseHistory(this.gameState.currentGameState.currentPhase);
+            // this.generateQuestion();
+        }
     }
 
     directPhaseClick(phaseNumber) {
@@ -2473,6 +2516,21 @@ class GameController {
                 }
             }
         });
+    }
+
+    // Método para obter frase do Ignórios
+    getIgnoriosPhrase(phase) {
+        
+        // Validar se a fase é válida
+        if (phase >= 2 && phase <= 10) {
+            return this.ignoriosPhrases.defeated[phase - 2]; // -2 porque começamos da fase 2
+        }
+        
+        // Se algo der errado, usar uma frase de encorajamento aleatória
+        /*
+        const randomIndex = Math.floor(Math.random() * this.ignoriosPhrases.encouragement.length);
+        return this.ignoriosPhrases.encouragement[randomIndex];
+        */
     }
 }
 
