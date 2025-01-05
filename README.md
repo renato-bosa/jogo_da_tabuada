@@ -83,3 +83,15 @@ Veja a Licença Pública Geral GNU para mais detalhes.
 
 Você deve ter recebido uma cópia da Licença Pública Geral GNU junto com este programa.
 Se não, veja <https://www.gnu.org/licenses/>.
+
+---
+
+## Créditos e Atribuições
+
+Efeitos sonoros:
+- "Old Video Game 4" by sonically_sound
+  File: 624878__sonically_sound__old-video-game-4.mp3
+  URL: https://freesound.org/s/624878/
+  License: Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+
+- Demais efeitos sonoros: https://mixkit.co/free-sound-effects/
