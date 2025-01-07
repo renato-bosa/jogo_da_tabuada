@@ -1087,45 +1087,39 @@ class GameController {
     advanceToNextPhase() {
         console.log('=== Avançando para próxima fase ===');
         
+        // Ganhar vida ao completar subfase (A ou B)
+        this.gainLife(); // O método já verifica se o total de vidas não ultrapassa o máximo.
+
+        // Se estamos na subfase A, avançar para B
         if (this.gameState.currentGameState.currentSubPhase === 'A') {
-            console.log('Avançando para subfase B');
-
             // Atualizar a subfase para B
+            console.log('Avançando para subfase B');
             this.gameState.currentGameState.currentSubPhase = 'B';
-            
-            // Ganhar vida ao completar subfase A
-            if (this.gameState.currentGameState.lives < this.gameState.globalConfigs.MAX_LIVES) {
-                this.gainLife();
-            }
-            
-            // Reiniciar estatísticas para a subfase B
-            this.gameState.phaseStats = {
-                errors: 0,
-                corrects: 0,
-                totalTime: 0,
-                startTime: Date.now()
-            };
-            this.gameState.initializePhaseQuestions();
+        }
 
-        } else {
-            console.log('Completou fase inteira, avançando para próxima fase');
-            
-            // Ganhar vida ao completar a fase inteira
-            if (this.gameState.currentGameState.lives < this.gameState.globalConfigs.MAX_LIVES) {
-                this.gainLife();
-            }
-            
+        // Se estamos na subfase B, avançar para a próxima fase
+        else if (this.gameState.currentGameState.currentSubPhase === 'B') {
             // Avançar para próxima fase
+            console.log('Completou fase inteira, avançando para próxima fase');
             this.gameState.currentGameState.currentPhase++;
             this.gameState.currentGameState.currentSubPhase = 'A';
-
-            // Atualizar highestPhase se necessário
-            if (this.gameState.currentGameState.highestPhase < this.gameState.currentGameState.currentPhase) {
-                this.gameState.currentGameState.highestPhase = this.gameState.currentGameState.currentPhase;
-            }
-            
-            this.gameState.initializePhaseQuestions();
         }
+
+        // Reiniciar estatísticas temporárias
+        this.gameState.phaseStats = {
+            errors: 0,
+            corrects: 0,
+            totalTime: 0,
+            startTime: Date.now()
+        };
+
+        // Atualizar highestPhase se necessário
+        if (this.gameState.currentGameState.highestPhase < this.gameState.currentGameState.currentPhase) {
+            this.gameState.currentGameState.highestPhase = this.gameState.currentGameState.currentPhase;
+        }
+
+        // Inicia as questões da próxima fase
+        this.gameState.initializePhaseQuestions();
 
         // Atualizar interface
         this.updateProgressBar();
@@ -1152,10 +1146,10 @@ class GameController {
         clearInterval(this.gameState.timerInterval);
 
         // Determinar a mensagem de "você dominou"
-        if (this.gameState.currentGameState.currentPhase != 10) {
-            var currentPhaseText = `tabuada do <span id="currentPhase">${this.gameState.currentGameState.currentPhase} (parte ${this.gameState.currentGameState.currentSubPhase})</span>`;
-        } else {
+        if (this.gameState.currentGameState.currentPhase == 10) {
             var currentPhaseText = `<span id="currentPhase">Fase Final (parte ${this.gameState.currentGameState.currentSubPhase})</span>`;
+        } else {
+            var currentPhaseText = `tabuada do <span id="currentPhase">${this.gameState.currentGameState.currentPhase} (parte ${this.gameState.currentGameState.currentSubPhase})</span>`;
         }
         
         // Inicializa a variável que determina se devemos mostrar as estatísticas
@@ -1287,30 +1281,34 @@ class GameController {
             // Chamar o efeito de confete após mostrar o modal
             setTimeout(() => this.celebrateCompletion(), 50);
             
-            // Resetar estatísticas para a próxima fase
-            // this.gameState.currentGameState.currentPhase++;
-            // this.gameState.currentGameState.currentSubPhase = 'A';
-
-            // Garante que highestPhase seja atualizado com o novo progresso
-            /*
-            if (this.gameState.currentGameState.highestPhase < this.gameState.currentGameState.currentPhase) {
-                this.gameState.currentGameState.highestPhase = this.gameState.currentGameState.currentPhase;
-            }
-            */
-            
-            // this.gameState.initializePhaseQuestions();
         }
 
-        // Avança o estado do jogo chamando o método
+        // Avança a fase no estado do jogo chamando o método específico
         this.advanceToNextPhase();
 
-        // this.updateProgressBar();
+        // Finalmente mostra o modal de conclusão da fase
         modal.style.display = 'block';
         
-        // Reattach event listener para o novo botão
-        document.getElementById('startNextPhase').addEventListener('click', () => this.continueGame());
+        // Obtém referência ao botão de continuar
+        const continueButton = document.getElementById('startNextPhase');
+
+        // Vincula o evento de clique ao botão de continuar
+        continueButton.addEventListener('click', () => this.continueGame());
+
+        // Se a nova subfase a ser iniciada é B (completou metade da fase),
+        // ...torna a ação de continuar acessível via tecla Enter.
+        // Caso contrário não, para cadenciar a interação com o modal.
+        if (this.gameState.currentGameState.currentSubPhase === 'B') {
+            // Coloca o foco no botão de continuar
+            continueButton.focus();
+            // Adiciona o evento de tecla Enter para continuar o jogo
+            continueButton.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    this.continueGame();
+                }
+            });
+        }
         
-        // this.gameState.saveCurrentGame();
     }
 
     showGameCompletionModal() {
@@ -1381,10 +1379,12 @@ class GameController {
 
     continueGame() {
         console.log('=== Continuando o jogo ===');
+        /*
         console.log('Estado atual:', {
             fase: this.gameState.currentGameState.currentPhase,
             subfase: this.gameState.currentGameState.currentSubPhase
         });
+        */
 
         const modal = document.getElementById('nextPhaseModal');
         modal.style.display = 'none';
