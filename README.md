@@ -35,6 +35,7 @@ Um jogo educativo e divertido para praticar as tabuadas de multiplicação, com 
 ---
 
 ## Como Jogar
+- Digite seu nome para começar.
 - Escolha a Dificuldade:
 Fácil (30s por pergunta)
 Médio (15s por pergunta)
@@ -48,10 +49,10 @@ Digite a resposta no campo e pressione "Enter" ou clique em "Verificar".
 Complete todas as perguntas de uma tabuada para desbloquear a próxima.
 
 - Gerencie suas Vidas:
-Você começa com 4 vidas. Cada erro reduz uma vida.
+Você começa com 5 vidas. Cada erro reduz uma vida. A cada fase conquistada você recupera uma vida.
 
 - Salve sua Pontuação:
-Após o fim do jogo, insira seu nome para salvar sua pontuação no ranking.
+Após o fim do jogo, veja a sua pontuação no ranking.
 
 ---
 
