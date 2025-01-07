@@ -1145,43 +1145,73 @@ class GameController {
         this.gameState.setIsPaused(true);
         clearInterval(this.gameState.timerInterval);
 
-        // Determinar a mensagem de "você dominou"
-        if (this.gameState.currentGameState.currentPhase == 10) {
-            var currentPhaseText = `<span id="currentPhase">Fase Final (parte ${this.gameState.currentGameState.currentSubPhase})</span>`;
-        } else {
-            var currentPhaseText = `tabuada do <span id="currentPhase">${this.gameState.currentGameState.currentPhase} (parte ${this.gameState.currentGameState.currentSubPhase})</span>`;
-        }
+        // Obtém a mensagem de "você dominou"
+        let currentPhaseText = this.getCurrentPhaseText();
         
-        // Inicializa a variável que determina se devemos mostrar as estatísticas
-        let showStats = false;
+        // Obtém a informação se devemos mostrar as estatísticas
+        let showStats = this.getShowStatsOption();
 
-        // Inicializa a variável que determina a mensagem de "próxima fase"
-        let nextPhaseText;
+        // Obtém a mensagem de "próxima fase"
+        let nextPhaseText = this.getNextPhaseText();
 
-        // Determina a mensagem de "próxima fase"
-        if (this.gameState.currentGameState.currentSubPhase === 'A') {
-            // Se estamos na subfase A, próxima é B da mesma fase
-            nextPhaseText = `tabuada do ${this.gameState.currentGameState.currentPhase} (parte B)`;
-        } else {
-            // Se estamos na subfase B, próxima é A da próxima fase
-            nextPhaseText = `tabuada do ${this.gameState.currentGameState.currentPhase + 1} (parte A)`;
-            showStats = true; // Mostrar estatísticas apenas ao completar a fase inteira
-        }
+        // Atualizar o modal com as mensagens corretas...
 
-        // Se a fase atual é a 9 e a subfase é B, então a próxima fase é a final
-        if (this.gameState.currentGameState.currentPhase == 9 && this.gameState.currentGameState.currentSubPhase == 'B') {
-            nextPhaseText = `<span id="nextPhase">Fase Final</span> (parte A)`;
-        }
-
-        // Se a fase atual é a 10 e a subfase é A, então a próxima fase é a final
-        if (this.gameState.currentGameState.currentPhase == 10 && this.gameState.currentGameState.currentSubPhase == 'A') {
-            nextPhaseText = `<span id="nextPhase">Fase Final</span> (parte B)`;
-        }
-
-        // Atualiza o modal com as mensagens corretas
+        // Obtém a referências ao modal e ao conteúdo do modal
         const modal = document.getElementById('nextPhaseModal');
         const modalContent = modal.querySelector('.modal-content');
 
+        // Obtém a string da mensagem de incentivo da subfase A completa:
+        let congratsMessage = this.getMessageSubPhaseAComplete(currentPhaseText, showStats, nextPhaseText);
+        
+        // Atualiza o modal com a mensagem de incentivo para continuar
+        modalContent.innerHTML = congratsMessage;
+        
+        // Caso a subfase seja B, mostra a versão do modal de conclusão da fase.
+        if (this.gameState.currentGameState.currentSubPhase === 'B') {
+            
+            // Usar estatísticas combinadas das subfases A e B
+            const stats = this.gameState.getCombinedPhaseStats(this.gameState.currentGameState.currentPhase);
+
+            // Obtém a string da mensagem de conclusão da fase:
+            congratsMessage = this.getMessageSubPhaseBComplete(currentPhaseText, showStats, nextPhaseText, stats);
+
+            // Atualiza o modal com a mensagem de conclusão da fase:
+            modalContent.innerHTML = congratsMessage;
+            
+            // Chamar o efeito de confete após mostrar o modal
+            setTimeout(() => this.celebrateCompletion(), 50);
+            
+        }
+
+        // Avança a fase no estado do jogo chamando o método específico
+        this.advanceToNextPhase();
+
+        // Finalmente mostra o modal de conclusão da fase
+        modal.style.display = 'block';
+        
+        // Obtém referência ao botão de continuar
+        const continueButton = document.getElementById('startNextPhase');
+
+        // Vincula o evento de clique ao botão de continuar
+        continueButton.addEventListener('click', () => this.continueGame());
+
+        // Se a nova subfase a ser iniciada é B (completou metade da fase),
+        // ...torna a ação de continuar acessível via tecla Enter.
+        // Caso contrário não, para cadenciar a interação com o modal.
+        if (this.gameState.currentGameState.currentSubPhase === 'B') {
+            // Coloca o foco no botão de continuar
+            continueButton.focus();
+            // Adiciona o evento de tecla Enter para continuar o jogo
+            continueButton.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    this.continueGame();
+                }
+            });
+        }
+        
+    }
+
+    getMessageSubPhaseAComplete(currentPhaseText, showStats, nextPhaseText) {
         // Monta a string da mensagem de incentivo para continuar:
         var congratsMessage = `
             <h2>Parabéns! <i class="fas fa-star"></i></h2>
@@ -1223,18 +1253,15 @@ class GameController {
                 Continuar <i class="fas fa-arrow-right"></i>
             </button>
         `;
-        
-        // Atualiza o modal com a mensagem de incentivo para continuar
-        modalContent.innerHTML = congratsMessage;
-        
-        // Caso a subfase seja B, mostra a versão do modal de conclusão da fase.
-        if (this.gameState.currentGameState.currentSubPhase === 'B') {
-            // Usar estatísticas combinadas das subfases A e B
-            const stats = this.gameState.getCombinedPhaseStats(this.gameState.currentGameState.currentPhase);
-            modalContent.innerHTML = `
-                <h2>Parabéns! <i class="fas fa-star"></i></h2>
-                <p>Você dominou a tabuada do <span id="currentPhase">${this.gameState.currentGameState.currentPhase}</span>!</p>
-                
+
+        return congratsMessage;
+    }
+
+    getMessageSubPhaseBComplete(currentPhaseText, showStats, nextPhaseText, stats) {
+        let congratsMessage = `
+            <h2>Parabéns! <i class="fas fa-star"></i></h2>
+            <p>Você dominou a tabuada do <span id="currentPhase">${this.gameState.currentGameState.currentPhase}</span>!</p>
+            
                 <div class="character-message">
                     <img src="img/Numi.webp" alt="Numi" class="numi-avatar">
                     <p class="numi-text">Você derrotou o Ignórios na tabuada do ${this.gameState.currentGameState.currentPhase}!</p>
@@ -1277,38 +1304,58 @@ class GameController {
                     Continuar <i class="fas fa-arrow-right"></i>
                 </button>
             `;
-            
-            // Chamar o efeito de confete após mostrar o modal
-            setTimeout(() => this.celebrateCompletion(), 50);
-            
+
+        return congratsMessage;
+    }
+
+    getCurrentPhaseText() {
+        // Determina a mensagem de "você dominou"
+        let currentPhaseText;
+
+        if (this.gameState.currentGameState.currentPhase == 10) {
+            currentPhaseText = `<span id="currentPhase">Fase Final (parte ${this.gameState.currentGameState.currentSubPhase})</span>`;
+        } else {
+            currentPhaseText = `tabuada do <span id="currentPhase">${this.gameState.currentGameState.currentPhase} (parte ${this.gameState.currentGameState.currentSubPhase})</span>`;
         }
 
-        // Avança a fase no estado do jogo chamando o método específico
-        this.advanceToNextPhase();
+        return currentPhaseText;
+    }
 
-        // Finalmente mostra o modal de conclusão da fase
-        modal.style.display = 'block';
-        
-        // Obtém referência ao botão de continuar
-        const continueButton = document.getElementById('startNextPhase');
+    getNextPhaseText() {
+        // Determina a mensagem de "próxima fase"
+        let nextPhaseText;
 
-        // Vincula o evento de clique ao botão de continuar
-        continueButton.addEventListener('click', () => this.continueGame());
-
-        // Se a nova subfase a ser iniciada é B (completou metade da fase),
-        // ...torna a ação de continuar acessível via tecla Enter.
-        // Caso contrário não, para cadenciar a interação com o modal.
-        if (this.gameState.currentGameState.currentSubPhase === 'B') {
-            // Coloca o foco no botão de continuar
-            continueButton.focus();
-            // Adiciona o evento de tecla Enter para continuar o jogo
-            continueButton.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter') {
-                    this.continueGame();
-                }
-            });
+        if (this.gameState.currentGameState.currentSubPhase === 'A') {
+            // Se estamos na subfase A, próxima é B da mesma fase
+            nextPhaseText = `tabuada do ${this.gameState.currentGameState.currentPhase} (parte B)`;
+        } else {
+            // Se estamos na subfase B, próxima é A da próxima fase
+            nextPhaseText = `tabuada do ${this.gameState.currentGameState.currentPhase + 1} (parte A)`;
         }
-        
+
+        // Se a fase atual é a 9 e a subfase é B, então a próxima fase é a final
+        if (this.gameState.currentGameState.currentPhase == 9 && this.gameState.currentGameState.currentSubPhase == 'B') {
+            nextPhaseText = `<span id="nextPhase">Fase Final</span> (parte A)`;
+        }
+
+        // Se a fase atual é a 10 e a subfase é A, então a próxima fase é a final
+        if (this.gameState.currentGameState.currentPhase == 10 && this.gameState.currentGameState.currentSubPhase == 'A') {
+            nextPhaseText = `<span id="nextPhase">Fase Final</span> (parte B)`;
+        }
+
+        return nextPhaseText;
+    }
+
+    getShowStatsOption() {
+        let showStats = false;
+
+        if (this.gameState.currentGameState.currentSubPhase === 'A') {
+            showStats = false;
+        } else {
+            showStats = true; // Mostrar estatísticas apenas ao completar a fase inteira
+        }
+
+        return showStats;
     }
 
     showGameCompletionModal() {
