@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Mini Games</title>
+    <style>
+        .game-container {
+            width: 480px;
+            height: 360px;
+            border: 1px solid #000;
+            margin: 20px auto;
+        }
+        .game-selector {
+            text-align: center;
+            margin: 20px;
+        }
+        .game-selector select {
+            padding: 5px 10px;
+            font-size: 16px;
+        }
+        .game-selector button {
+            padding: 5px 15px;
+            font-size: 16px;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-selector">
+        <select id="gameSelect">
+            <option value="CircleClicker">Circle Clicker</option>
+            <option value="MemoryGame">Memory Game</option>
+            <option value="ColorWaves">Color Waves</option>
+            <option value="StarryNight">Starry Night</option>
+            <option value="FlowingGarden">Flowing Garden</option>
+            <option value="BubbleFloat">Bubble Float</option>
+            <option value="RainbowRipples">Rainbow Ripples</option>
+            <option value="PlatformHero">Platform Hero</option>
+        </select>
+        <button onclick="startSelectedGame()">Iniciar Jogo</button>
+    </div>
+    <div id="gameContainer" class="game-container"></div>
+
+    <script src="js-games/GameBase.js"></script>
+    <script src="js-games/GameManager.js"></script>
+    <script src="js-games/games/CircleClicker.js"></script>
+    <script src="js-games/games/MemoryGame.js"></script>
+    <script src="js-games/games/ColorWaves.js"></script>
+    <script src="js-games/games/StarryNight.js"></script>
+    <script src="js-games/games/FlowingGarden.js"></script>
+    <script src="js-games/games/BubbleFloat.js"></script>
+    <script src="js-games/games/RainbowRipples.js"></script>
+    <script src="js-games/games/PlatformHero.js"></script>
+    <script>
+        let currentGame = null;
+        
+        function startSelectedGame() {
+            // Para o jogo atual se existir
+            if (currentGame) {
+                currentGame.stop();
+            }
+            
+            // Limpa o container
+            const container = document.getElementById('gameContainer');
+            container.innerHTML = '';
+            
+            // Inicia o novo jogo
+            const selectedGame = document.getElementById('gameSelect').value;
+            currentGame = window.gameManager.createGame(selectedGame, 'gameContainer');
+            currentGame.start();
+        }
+        
+        // Inicia o primeiro jogo automaticamente
+        startSelectedGame();
+    </script>
+</body>
+</html> 
