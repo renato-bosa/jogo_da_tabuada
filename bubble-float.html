@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Bubble Float</title>
+    <style>
+        .game-container {
+            width: 480px;
+            height: 360px;
+            border: 1px solid #000;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer" class="game-container"></div>
+
+    <script src="js-games/GameBase.js"></script>
+    <script src="js-games/GameManager.js"></script>
+    <script src="js-games/games/BubbleFloat.js"></script>
+    <script>
+        window.onload = function() {
+            const container = document.getElementById('gameContainer');
+            const game = window.gameManager.createGame('BubbleFloat', 'gameContainer');
+            game.start();
+        };
+    </script>
+</body>
+</html> 

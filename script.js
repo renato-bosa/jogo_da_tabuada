@@ -2234,6 +2234,42 @@ class GameController {
         }, 400);
     }
 
+    getMinigameIframe(phase) {
+        var texto_minigame = '<p style="margin: 0;"><b>Hora de relaxar, jogue um minigame antes de continuar!</b></p>';
+
+        const isCompleted = this.gameState.currentGameState.phaseStats[`${phase}B`]?.completed;
+        const scale = isCompleted ? 0.4 : 0.8; // Fator de escala para o zoom
+        const width = isCompleted ? 200 : 400;
+        const height = isCompleted ? 152 : 304;
+
+        // Dicionário de minigames
+        var minigames = {
+            3: 'platform-hero.html',
+            4: 'bubble-float.html',
+            5: 'flowing-garden.html',
+            6: 'rainbow-ripples.html',
+            7: 'starry-night.html',
+            8: 'color-waves.html',
+            9: 'platform-hero.html',
+            10: 'bubble-float.html',
+            11: 'rainbow-ripples.html',
+        }
+
+        // Criar um container que vai manter o tamanho original do iframe
+        var minigame_iframe = `
+            <div id="minigame-iframe" style="text-align: center; width: ${width}px; height: ${height}px; margin: auto; overflow: hidden; position: relative;">
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scale(${scale}); transform-origin: 0 0;">
+                    <iframe id="game-frame" src="${minigames[phase]}" 
+                        style="width: ${Math.floor(width/scale)}px; height: ${Math.floor(height/scale)}px;" 
+                        frameborder="0">
+                    </iframe>
+                </div>
+            </div>
+        `;
+
+        return '<div style="text-align: center; background-color: rgba(0,0,0,0.2); padding: 5px; margin: 5px; border-radius: 5px;">' + texto_minigame + minigame_iframe + '</div>';
+    }
+
     showPhaseHistory(phase) {
         // Pausar o jogo
         this.gameState.setIsPaused(true);
@@ -2260,7 +2296,20 @@ class GameController {
         document.getElementById('phaseSubtitle').textContent = this.getPhaseSubtitle(phase);
         
         // Atualizar história da fase
-        document.getElementById('phaseStory').innerHTML = this.getPhaseStory(phase);
+        if (phase > 2) {
+            var minigame_iframe = this.getMinigameIframe(phase);
+            document.getElementById('phaseStory').innerHTML = minigame_iframe + this.getPhaseStory(phase);
+
+            // Adicionar um pequeno delay para garantir que o iframe esteja carregado
+            setTimeout(() => {
+                const iframe = document.getElementById('game-frame');
+                if (iframe) {
+                    iframe.focus();
+                }
+            }, 100);
+        } else {
+            document.getElementById('phaseStory').innerHTML = this.getPhaseStory(phase);
+        }
         
         // Atualizar estatísticas apenas se não for a fase de introdução
         if (phase === 0) {

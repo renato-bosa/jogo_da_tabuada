@@ -231,13 +231,43 @@ class PlatformHero extends GameBase {
         });
         
         // Desenhar jogador
-        this.context.fillStyle = this.player.color;
+        // Corpo principal
+        this.context.fillStyle = '#4A90E2';  // Azul mais amigável
         this.context.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
         
-        // Olhos do personagem
-        const eyeOffset = this.player.direction > 0 ? 20 : 5;
+        // Pernas
+        this.context.fillStyle = '#2C3E50';
+        this.context.fillRect(this.player.x + 5, this.player.y + this.player.height - 10, 8, 10);  // Perna esquerda
+        this.context.fillRect(this.player.x + this.player.width - 13, this.player.y + this.player.height - 10, 8, 10);  // Perna direita
+        
+        // Braços
+        const armY = this.player.y + 15;
+        if (this.player.direction > 0) {
+            this.context.fillRect(this.player.x + this.player.width - 5, armY, 8, 12);  // Braço direito
+        } else {
+            this.context.fillRect(this.player.x - 3, armY, 8, 12);  // Braço esquerdo
+        }
+        
+        // Rosto
+        // Olhos
         this.context.fillStyle = 'white';
-        this.context.fillRect(this.player.x + eyeOffset, this.player.y + 10, 5, 5);
+        const eyeBaseX = this.player.direction > 0 ? this.player.x + 15 : this.player.x + 5;
+        this.context.fillRect(eyeBaseX, this.player.y + 10, 6, 6);  // Olho principal
+        this.context.fillRect(eyeBaseX + 8, this.player.y + 10, 6, 6);  // Segundo olho
+        
+        // Pupilas
+        this.context.fillStyle = 'black';
+        const pupilOffset = this.player.direction > 0 ? 2 : 0;
+        this.context.fillRect(eyeBaseX + pupilOffset, this.player.y + 12, 3, 3);
+        this.context.fillRect(eyeBaseX + 8 + pupilOffset, this.player.y + 12, 3, 3);
+        
+        // Boca feliz
+        this.context.beginPath();
+        const mouthX = this.player.direction > 0 ? this.player.x + 18 : this.player.x + 8;
+        this.context.arc(mouthX, this.player.y + 22, 4, 0, Math.PI, false);
+        this.context.strokeStyle = 'black';
+        this.context.lineWidth = 2;
+        this.context.stroke();
         
         // Instruções
         this.context.font = 'bold 20px Arial';
