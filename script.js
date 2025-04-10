@@ -521,10 +521,10 @@ class GameState {
         this.playSound('wrongSound');
         
         // Atualizar estatísticas
-        this.updatePhaseStats(false);
+        this.gameState.updatePhaseStats(false);
         
-        const key = `${this.currentGameState.currentQuestion.num1}x${this.currentGameState.currentQuestion.num2}`;
-        this.currentGameState.currentQuestions[key].masteryLevel = 0;
+        const key = `${this.gameState.currentGameState.currentQuestion.num1}x${this.gameState.currentGameState.currentQuestion.num2}`;
+        this.gameState.currentGameState.currentQuestions[key].masteryLevel = 0;
         
         console.log('Pausando o jogo');
         this.gameState.setIsPaused(true);
@@ -532,8 +532,6 @@ class GameState {
         
         console.log('Mostrando modal de resposta errada');
         this.showWrongAnswerModal();
-        // this.gameState.decrementLives();
-        this.loseLife();
         this.updateHistory(false);
         
         // Salvar após resposta errada
@@ -830,7 +828,6 @@ class GameController {
         this.playSound('wrongSound');
 
         // Atualizar estatsticas
-        // (usamos o método updatePhaseStats com o parâmetro false para indicar que a resposta é errada.)
         this.gameState.updatePhaseStats(false);
         
         const key = `${this.gameState.currentGameState.currentQuestion.num1}x${this.gameState.currentGameState.currentQuestion.num2}`;
@@ -842,8 +839,6 @@ class GameController {
         
         console.log('Mostrando modal de resposta errada');
         this.showWrongAnswerModal();
-        // this.gameState.decrementLives();
-        this.loseLife();
         this.updateHistory(false);
         
         // Salvar após resposta errada
@@ -1025,8 +1020,8 @@ class GameController {
         const hearts = document.querySelectorAll('.hearts-container .fa-heart');
         const livesElement = document.getElementById('lives');
         
-        if (this.gameState.currentGameState.lives > 0) {
-            hearts[this.gameState.currentGameState.lives - 1].classList.add('heart-lost');
+        if (this.gameState.getLives() > 0) {
+            hearts[this.gameState.getLives() - 1].classList.add('heart-lost');
             livesElement.classList.remove('lives-highlight');
             void livesElement.offsetWidth;
             livesElement.classList.add('lives-highlight');
@@ -1038,8 +1033,25 @@ class GameController {
                 // Salvar após perder vida
                 this.gameState.saveCurrentGame();
                 
-                if (this.gameState.currentGameState.lives <= 0) {
-                    this.gameOver();
+                if (this.gameState.getLives() <= 0) {
+                    // Ao invés de game over, mostrar modal de última vida
+                    const lastLifeModal = document.getElementById('lastLifeModal');
+                    lastLifeModal.style.display = 'block';
+
+                    // Adicionar evento ao botão de OK
+                    const restartPhaseBtn = document.getElementById('restartPhase');
+                    restartPhaseBtn.onclick = () => {
+                        lastLifeModal.style.display = 'none';
+                        
+                        // Resetar vidas
+                        this.gameState.resetLives();
+                        this.updateLives();
+
+                        // Voltar para o início da fase atual (subphase A)
+                        const phaseNumber = this.gameState.getCurrentPhase();
+                        const basePhaseNumber = Math.floor(phaseNumber); // Remove a parte decimal (5.5 -> 5)
+                        this.changePhase(basePhaseNumber);
+                    };
                 }
             }, 500);
         }
@@ -1730,6 +1742,10 @@ class GameController {
 
     continueAfterWrong() {
         document.getElementById('wrongAnswerModal').style.display = 'none';
+        
+        // Agora processamos a perda de vida aqui
+        this.loseLife();
+        
         this.gameState.setIsPaused(false);
         document.getElementById('game').classList.remove('game-paused');
         

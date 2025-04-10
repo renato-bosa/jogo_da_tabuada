@@ -1638,3 +1638,50 @@ button:hover {
         height: 60px;
     }
 }
+
+/* Estilos para o modal de última vida */
+.modal-content h2 i.fa-heart-broken {
+    color: #ff4757;
+    margin-right: 10px;
+}
+
+.character-message {
+    margin: 20px 0;
+    padding: 15px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background-color: rgba(30, 60, 114, 0.05);
+}
+
+.character-message:first-of-type {
+    background-color: rgba(73, 78, 89, 0.05);
+}
+
+.character-message img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.character-message p {
+    margin: 0;
+    font-size: 1.2em;
+    line-height: 1.4;
+    flex-grow: 1;
+}
+
+/* Responsividade para telas menores */
+@media screen and (max-width: 480px) {
+    .character-message {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .character-message img {
+        width: 60px;
+        height: 60px;
+    }
+}

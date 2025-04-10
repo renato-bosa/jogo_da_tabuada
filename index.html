@@ -278,5 +278,23 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- Modal de perda de última vida -->
+    <div id="lastLifeModal" class="modal">
+        <div class="modal-content">
+            <h2><i class="fas fa-heart-broken"></i> Energia Esgotada!</h2>
+            <div class="character-message">
+                <img src="img/Ignorius.webp" alt="Ignórios" class="ignorios-avatar">
+                <p class="ignorios-text">Ignórus conseguiu esgotar os seus poderes...</p>
+            </div>
+            <div class="character-message">
+                <img src="img/Numi.webp" alt="Numi" class="numi-avatar">
+                <p class="numi-text">Você voltou ao início da fase para reabastecer as suas energias com a ajuda mágica de Numi.</p>
+            </div>
+            <button id="restartPhase" class="action-btn">
+                <i class="fas fa-redo"></i> OK
+            </button>
+        </div>
+    </div>
 </body>
 </html>
